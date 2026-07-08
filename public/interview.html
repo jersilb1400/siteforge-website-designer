@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiteForge — Interview</title>
+  <meta name="description" content="Tell us about your business and SiteForge will forge your website." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand"><span class="mark">SF</span> SiteForge</div>
+      <span class="step-counter" id="counter" aria-hidden="true"></span>
+    </div>
+  </header>
+
+  <main class="wrap" style="max-width: 720px; padding-top: 2.5rem; padding-bottom: 3rem;">
+    <div class="rail" aria-hidden="true" style="margin-bottom: 2rem;"><span id="rail"></span></div>
+
+    <!-- loading -->
+    <div id="loading" class="card center">
+      <span class="spinner"></span>
+      <p class="muted" style="margin-top: 0.75rem;">Loading your interview…</p>
+    </div>
+
+    <!-- question -->
+    <section id="stage" class="hidden" aria-live="polite"></section>
+
+    <!-- completion -->
+    <section id="done" class="hidden"></section>
+
+    <p id="fatal" class="notice hidden" role="alert"></p>
+  </main>
+
+  <footer class="foot"><div class="wrap">SiteForge · interview engine · your answers save automatically</div></footer>
+
+  <script src="/interview.js"></script>
+</body>
+</html>

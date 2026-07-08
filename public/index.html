@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiteForge — Operator</title>
+  <meta name="description" content="SiteForge operator dashboard: forge and deploy client websites." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand"><span class="mark">SF</span> SiteForge</div>
+      <button id="signout" class="btn ghost hidden" style="padding:0.4rem 0.8rem;font-size:0.85rem;">Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top: 2.5rem; padding-bottom: 3rem;">
+
+    <!-- gate -->
+    <section id="gate" class="hidden" style="max-width: 440px; margin: 3rem auto;">
+      <div class="eyebrow">operator access</div>
+      <h1 style="margin:0.6rem 0 0.5rem;">The forge is locked.</h1>
+      <p class="muted">Enter your operator token to manage client projects.</p>
+      <div class="card stack" style="margin-top:1.25rem;">
+        <label class="field">
+          <span class="lbl">Operator token</span>
+          <input type="password" id="token" placeholder="OPERATOR_TOKEN" autocomplete="off" />
+        </label>
+        <p id="gate-err" class="error" role="alert"></p>
+        <button id="unlock" class="btn primary">Unlock</button>
+      </div>
+    </section>
+
+    <!-- app -->
+    <section id="app" class="hidden">
+      <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:1.5rem;">
+        <div>
+          <div class="eyebrow">workshop</div>
+          <h1 style="margin-top:0.5rem;">Projects</h1>
+        </div>
+        <button id="new-btn" class="btn primary">+ New project</button>
+      </div>
+
+      <!-- new project form -->
+      <div id="new-form" class="card stack hidden" style="margin-bottom:1.5rem;">
+        <h2>Start a project</h2>
+        <label class="field">
+          <span class="lbl">Client / organization name</span>
+          <input type="text" id="clientName" placeholder="e.g. Grace Fellowship" />
+        </label>
+        <label class="field">
+          <span class="lbl">Contact email <span class="muted">(optional)</span></span>
+          <input type="email" id="contactEmail" placeholder="pastor@example.org" />
+        </label>
+        <label class="field">
+          <span class="lbl">Project name <span class="muted">(optional)</span></span>
+          <input type="text" id="projectName" placeholder="Defaults to “<client> website”" />
+        </label>
+        <p id="new-err" class="error" role="alert"></p>
+        <div class="row">
+          <button id="create" class="btn primary">Create & get interview link</button>
+          <button id="cancel-new" class="btn ghost">Cancel</button>
+        </div>
+      </div>
+
+      <!-- created notice -->
+      <div id="created" class="notice hidden" style="margin-bottom:1.5rem;"></div>
+
+      <div id="list" class="stack" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="foot"><div class="wrap">SiteForge · operator dashboard · v0.1</div></footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+# SiteForge — Cloudflare Workers configuration.
+#
+# Binding IDs below are PLACEHOLDERS. Run ./setup.sh (or the individual
+# `wrangler ... create` commands) under your own Cloudflare login, then paste
+# the returned IDs here. IDs are not secret; API keys are and live in Wrangler
+# secrets (see .dev.vars.example), never in this file.
+
+name = "siteforge"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Serve the SiteForge dashboard + generated-site previews as static assets.
+# Static files are served directly; anything unmatched falls through to the
+# Worker (src/index.ts), which owns /api/* and SPA fallback.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[observability]
+enabled = true
+
+# --- D1: projects, clients, interview answers, ingested content, builds ---
+[[d1_databases]]
+binding = "DB"
+database_name = "siteforge-db"
+database_id = "PLACEHOLDER_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# --- KV: sessions, scrape cache, rate limiting ---
+[[kv_namespaces]]
+binding = "KV"
+id = "PLACEHOLDER_KV_NAMESPACE_ID"
+
+# --- R2: site bundles, scraped assets, images, versioned backups ---
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "siteforge-assets"
+
+# --- Queues: async scrape + build jobs (Phase 2+) ---
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "siteforge-ingest"
+
+[[queues.consumers]]
+queue = "siteforge-ingest"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "siteforge-ingest-dlq"
+
+# --- Workers AI: cheap classification fallback (Phase 2+) ---
+[ai]
+binding = "AI"
+
+# --- Browser Rendering: render/extract existing sites (Phase 2) ---
+[browser]
+binding = "BROWSER"
+
+[vars]
+ENVIRONMENT = "development"
+# Non-secret model routing defaults; override per-environment as needed.
+ANTHROPIC_MODEL_SMART = "claude-sonnet-5"
+ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001"
+
+# Production environment overrides. Deploy with: wrangler deploy --env production
+[env.production]
+name = "siteforge-production"
+vars = { ENVIRONMENT = "production", ANTHROPIC_MODEL_SMART = "claude-sonnet-5", ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001" }

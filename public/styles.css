@@ -1,0 +1,292 @@
+/* SiteForge design system — "precision instrument for forging websites".
+   Cool steel/graphite on disciplined off-white; one saturated ember accent
+   spent only on primary action + the heating progress rail; a monospace voice
+   for enumerated data (IDs, steps, statuses). Boldness lives in one place. */
+
+:root {
+  --ink: #191a1d;
+  --ink-soft: #33363b;
+  --paper: #f6f5f2;
+  --surface: #ffffff;
+  --steel: #71757c;
+  --steel-2: #9a9da3;
+  --line: #e4e2dc;
+  --line-strong: #d3d1c9;
+  --ember: #e14318;
+  --ember-deep: #b02f0c;
+  --ember-tint: #fbe9e2;
+  --ok: #2e7d5b;
+  --ok-tint: #e4f1ea;
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --r: 10px;
+  --r-sm: 6px;
+  --shadow: 0 1px 2px rgba(25, 26, 29, 0.04), 0 8px 24px -12px rgba(25, 26, 29, 0.12);
+  --maxw: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--ink);
+  background-color: var(--paper);
+  /* Blueprint hairline grid — the workshop table the sites are forged on. */
+  background-image:
+    linear-gradient(to right, rgba(25, 26, 29, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(25, 26, 29, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  line-height: 1.5;
+  font-feature-settings: 'ss01' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- typography --- */
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--ember-deep); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.eyebrow::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  background: var(--ember);
+}
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--steel); }
+
+/* --- layout shells --- */
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.25rem; }
+
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: rgba(246, 245, 242, 0.85);
+  backdrop-filter: saturate(150%) blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: 1.15rem;
+}
+.brand .mark {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  /* the ember spark on the anvil */
+  box-shadow: inset 0 -3px 0 var(--ember);
+}
+
+/* --- cards --- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.card + .card { margin-top: 1rem; }
+
+/* Spec-sheet project row */
+.spec {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.spec:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.spec + .spec { margin-top: 0.6rem; }
+.spec .title { font-weight: 600; font-size: 1.05rem; }
+.spec .id { font-family: var(--font-mono); font-size: 0.72rem; color: var(--steel-2); }
+
+/* --- status pills --- */
+.pill {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.pill.interview { background: var(--ember-tint); border-color: transparent; color: var(--ember-deep); }
+.pill.ingesting, .pill.generating { background: #eef1f4; border-color: transparent; color: #3a4a5c; }
+.pill.deployed, .pill.ready { background: var(--ok-tint); border-color: transparent; color: var(--ok); }
+
+/* --- buttons --- */
+.btn {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.7rem 1.25rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.btn:hover { background: #000; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--ember); border-color: var(--ember); }
+.btn.primary:hover { background: var(--ember-deep); border-color: var(--ember-deep); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn.ghost:hover { background: #fff; border-color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* --- forms --- */
+label.field { display: block; margin-bottom: 1rem; }
+label.field .lbl {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+label.field .help { display: block; font-size: 0.85rem; color: var(--steel); margin-bottom: 0.5rem; }
+input[type=text], input[type=email], input[type=url], input[type=password], textarea, select {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 0.7rem 0.85rem;
+}
+textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+input:focus, textarea:focus, select:focus, .btn:focus-visible, a:focus-visible, .opt:focus-within {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-color: var(--ember);
+}
+
+/* option chips (single/multi select) */
+.opts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--surface);
+  font-size: 0.95rem;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.opt:hover { border-color: var(--ink); }
+.opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.opt.checked { border-color: var(--ember); background: var(--ember-tint); color: var(--ember-deep); }
+
+/* --- the forge progress rail (signature element) --- */
+.rail {
+  height: 6px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rail > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  /* heat gradient: cool steel edge → glowing ember */
+  background: linear-gradient(90deg, #8a5a3a 0%, var(--ember) 55%, #ff7a45 100%);
+  box-shadow: 0 0 12px -2px var(--ember);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.step-counter {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--steel);
+}
+.step-counter b { color: var(--ember-deep); font-weight: 600; }
+
+/* --- misc --- */
+.stack > * + * { margin-top: 1rem; }
+.row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.grow { flex: 1; }
+.center { text-align: center; }
+.notice {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ember);
+  background: var(--surface);
+  border-radius: var(--r-sm);
+  padding: 0.85rem 1rem;
+  font-size: 0.92rem;
+}
+.error { color: var(--ember-deep); font-size: 0.9rem; min-height: 1.2em; }
+.hidden { display: none !important; }
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--line);
+  border-top-color: var(--ember);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+footer.foot {
+  border-top: 1px solid var(--line);
+  margin-top: 3rem;
+  padding: 1.5rem 0;
+  color: var(--steel);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+@media (max-width: 640px) {
+  .card { padding: 1.15rem; }
+  .spec { grid-template-columns: 1fr; }
+}

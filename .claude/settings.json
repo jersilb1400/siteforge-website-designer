@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run typecheck)",
+      "Bash(npm run test)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx wrangler deploy --dry-run:*)",
+      "Bash(npx wrangler types:*)",
+      "Bash(npm run cf-typegen)",
+      "Bash(npm run db:local:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(wrangler secret:*)",
+      "Bash(npx wrangler secret:*)",
+      "Bash(npm run deploy)",
+      "Bash(npm run deploy:*)",
+      "Bash(wrangler d1 execute:*)",
+      "Bash(npx wrangler d1 execute:*)",
+      "Bash(npm run db:remote:*)",
+      "Read(./.dev.vars)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
