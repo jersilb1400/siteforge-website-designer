@@ -94,12 +94,33 @@ ingest.get('/projects/:id/source-content', async (c) => {
     data: safeParse(r.data_json),
   }));
 
-  const assets = await all<{ id: string; r2_key: string; source_url: string | null; alt_text: string | null }>(
+  const assets = await all<{
+    id: string;
+    r2_key: string;
+    source_url: string | null;
+    alt_text: string | null;
+    review_status: string;
+  }>(
     c.env,
-    'SELECT id, r2_key, source_url, alt_text FROM assets WHERE project_id = ? ORDER BY created_at DESC LIMIT 60',
+    'SELECT id, r2_key, source_url, alt_text, review_status FROM assets WHERE project_id = ? ORDER BY created_at DESC LIMIT 60',
     projectId,
   );
   return c.json({ items, assets });
+});
+
+// PATCH /api/assets/:id — approve/reject a scraped image. Content-ethics gate:
+// only assets with review_status confirmed/edited are baked into a build.
+ingest.patch('/assets/:id', async (c) => {
+  const assetId = c.req.param('id');
+  const existing = await one<{ id: string }>(c.env, 'SELECT id FROM assets WHERE id = ?', assetId);
+  if (!existing) throw new NotFound('asset');
+  const body = await c.req.json<{ reviewStatus?: string }>().catch(() => ({}) as { reviewStatus?: string });
+  const allowed = ['pending', 'confirmed', 'rejected', 'edited'];
+  if (!body.reviewStatus || !allowed.includes(body.reviewStatus)) {
+    throw new BadRequest(`reviewStatus must be one of ${allowed.join(', ')}.`);
+  }
+  await run(c.env, 'UPDATE assets SET review_status = ? WHERE id = ?', body.reviewStatus, assetId);
+  return c.json({ id: assetId, reviewStatus: body.reviewStatus });
 });
 
 // PATCH /api/source-content/:id — confirm / reject / edit a reviewed row.

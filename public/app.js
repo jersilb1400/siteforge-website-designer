@@ -129,6 +129,15 @@ async function openProject(id) {
           <p class="muted" style="font-size:0.88rem;margin:0.5rem 0 0;">Scrapes the client's website, Facebook, and Google listing from their interview answers. Nothing is used until you confirm it below.</p>
           <div id="ingest-panel" style="margin-top:1rem;" aria-live="polite"></div>
         </div>
+
+        <div>
+          <div class="row" style="justify-content:space-between;">
+            <span class="eyebrow">generate</span>
+            <button class="btn primary" id="run-generate" style="padding:0.45rem 0.85rem;font-size:0.85rem;">Generate preview</button>
+          </div>
+          <p class="muted" style="font-size:0.88rem;margin:0.5rem 0 0;">Builds a live preview from the interview and confirmed content. Each build is versioned.</p>
+          <div id="builds-panel" style="margin-top:1rem;" aria-live="polite"></div>
+        </div>
       </div>`;
 
     el('back').addEventListener('click', loadProjects);
@@ -138,7 +147,9 @@ async function openProject(id) {
       catch { el('link').select(); }
     });
     el('run-ingest').addEventListener('click', () => runIngest(project.id));
+    el('run-generate').addEventListener('click', () => runGenerate(project.id));
     loadIngestion(project.id);
+    loadBuilds(project.id);
   } catch (e) {
     list.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
   }
@@ -166,11 +177,12 @@ async function loadIngestion(projectId) {
   const panel = el('ingest-panel');
   if (!panel) return false;
   try {
-    const { items } = await api(`/api/projects/${projectId}/source-content`);
-    if (!items.length) { panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No ingested content yet.</p>`; return false; }
-    panel.innerHTML = items.map((it) => sourceCard(it)).join('');
+    const { items, assets } = await api(`/api/projects/${projectId}/source-content`);
+    if (!items.length && (!assets || !assets.length)) { panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No ingested content yet.</p>`; return false; }
+    panel.innerHTML = items.map((it) => sourceCard(it)).join('') + assetsCard(assets || []);
     panel.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.confirm, 'confirmed')));
     panel.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.reject, 'rejected')));
+    panel.querySelectorAll('[data-asset]').forEach((b) => b.addEventListener('click', () => reviewAsset(projectId, b.dataset.asset, b.dataset.status)));
     return true;
   } catch (e) {
     panel.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
@@ -210,6 +222,73 @@ function sourceCard(it) {
         <button class="btn ghost" style="padding:0.45rem 0.9rem;font-size:0.85rem;" data-reject="${escapeHtml(it.id)}">Reject</button>
       </div>`}
     </div>`;
+}
+
+async function runGenerate(projectId) {
+  const btn = el('run-generate');
+  btn.disabled = true; btn.textContent = 'Forging…';
+  try {
+    const r = await api(`/api/projects/${projectId}/generate`, { method: 'POST', body: '{}' });
+    await loadBuilds(projectId);
+    window.open(r.previewUrl, '_blank', 'noopener');
+  } catch (e) {
+    el('builds-panel').innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate preview';
+  }
+}
+
+async function loadBuilds(projectId) {
+  const panel = el('builds-panel');
+  if (!panel) return;
+  try {
+    const { builds } = await api(`/api/projects/${projectId}/builds`);
+    if (!builds.length) { panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No builds yet.</p>`; return; }
+    panel.innerHTML = builds.map((b) => `
+      <div class="spec" style="margin-bottom:0.5rem;">
+        <div>
+          <div class="title">Version ${b.version} <span class="pill">${escapeHtml(b.theme_id)}</span></div>
+          <div class="id">${escapeHtml(b.id)}</div>
+        </div>
+        <div class="row" style="justify-content:flex-end;">
+          <span class="pill ${b.status === 'ready' || b.status === 'deployed' ? 'ready' : ''}">${escapeHtml(b.status)}</span>
+          <a class="btn ghost" style="padding:0.45rem 0.9rem;font-size:0.85rem;" href="${escapeHtml(b.preview_url)}" target="_blank" rel="noopener">Preview</a>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    panel.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// Scraped images: each must be individually approved before it can be used in a
+// build (content-ethics gate — copyright / accuracy).
+function assetsCard(assets) {
+  if (!assets.length) return '';
+  const tiles = assets.map((a) => {
+    const approved = a.review_status === 'confirmed' || a.review_status === 'edited';
+    const rejected = a.review_status === 'rejected';
+    return `<figure style="margin:0;border:1px solid ${approved ? 'var(--ok)' : 'var(--line)'};border-radius:8px;overflow:hidden;opacity:${rejected ? '0.4' : '1'};">
+      <img src="${escapeHtml(a.source_url || '')}" alt="${escapeHtml(a.alt_text || '')}" style="width:100%;height:110px;object-fit:cover;background:var(--line);" loading="lazy" />
+      <figcaption class="row" style="gap:.3rem;padding:.4rem;justify-content:center;">
+        <button class="btn ${approved ? '' : 'primary'}" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="confirmed">${approved ? '✓ Approved' : 'Approve'}</button>
+        <button class="btn ghost" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="rejected">Reject</button>
+      </figcaption>
+    </figure>`;
+  }).join('');
+  return `<div class="card" style="padding:1.1rem;margin-bottom:0.75rem;">
+    <div class="eyebrow" style="margin:0 0 .25rem;">scraped images</div>
+    <p class="muted" style="font-size:.85rem;margin:0 0 .8rem;">Approve only images you have the right to use. Only approved images are built into the site.</p>
+    <div style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">${tiles}</div>
+  </div>`;
+}
+
+async function reviewAsset(projectId, assetId, status) {
+  try {
+    await api(`/api/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ reviewStatus: status }) });
+    loadIngestion(projectId);
+  } catch (e) {
+    el('ingest-panel').insertAdjacentHTML('afterbegin', `<div class="notice">${escapeHtml(e.message)}</div>`);
+  }
 }
 
 async function reviewSource(projectId, sourceId, status) {

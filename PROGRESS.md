@@ -16,7 +16,7 @@ done, what is *verified*, and what is next.
 | 0 | Foundation | **Implemented & locally verified.** `tsc` clean, `wrangler deploy --dry-run` bundles all bindings, `wrangler dev` serves `/api/health` + `/api/ready` (D1+KV live). Real production `wrangler deploy` pending Jeremy's Cloudflare credentials + provisioned binding IDs. |
 | 1 | Interview Engine | **Implemented & verified end-to-end** against local D1 via `wrangler dev` (create project → 20-question adaptive interview → structured JSON profile; status advanced to `ingesting`; resume is idempotent). Only AI *enrichment* (industry page suggestions, thin-answer follow-ups) is unverified, pending a live `ANTHROPIC_API_KEY`. |
 | 2 | Ingestion Pipeline | **Implemented & locally verified.** URL → queue → HTMLRewriter extract → R2 images → normalized `source_content` → confirm/reject gate, verified end-to-end in `wrangler dev`. Browser Rendering path is a documented stub (paid plan); fetch fallback ships. |
-| 3 | Generation Engine | TODO |
+| 3 | Generation Engine | **Core implemented & locally verified.** Interview + confirmed content → theme select → palette → copy (Claude + deterministic fallback) → self-contained HTML bundle in R2 → versioned build → preview served from R2. Verified end-to-end in `wrangler dev`. Live preview-*deploy* (own subdomain) deferred to Phase 4 (needs Cloudflare creds). |
 | 4 | Revision & Production Deploy | TODO |
 | 5 | Polish & Extend | TODO |
 
@@ -107,17 +107,35 @@ documented stub — it needs the paid Workers plan + `@cloudflare/puppeteer`, wh
 exercised in this environment. The fetch fallback covers server-rendered sites; JS-heavy
 sites need the seam implemented + `USE_BROWSER_RENDERING=true`.
 
-## Phase 3 — Generation Engine  ⬜ TODO
+## Phase 3 — Generation Engine  ✅ core implemented & locally verified
 
-Deliverable: interview + ingestion → live preview site.
-- [ ] Theme library: 6–10 base templates to frontend-design standards (semantic HTML5 +
-      Tailwind + vanilla JS; no heavy frameworks in client output).
-- [ ] Claude generation pipeline: template + palette + typography + real copy + images →
-      static bundle; snapshot inputs in `builds.spec_json` for reproducible rebuilds.
-- [ ] Bundle assembly to R2 (`builds.bundle_r2_key`) + preview deploy
-      (`preview-{id}.siteforge.workers.dev`).
-- [ ] Guard: no lorem ipsum ever reaches a preview.
-- [ ] Verify: run interview→ingestion→generate, open the preview URL, reviewer → GO.
+Deliverable: interview + ingestion → live preview site. **Met (preview served from R2).**
+- [x] Theme system (`src/generate/themes/`): shared semantic HTML sections + inline CSS
+      (no CDN, Lighthouse-friendly), driven by palette tokens + layout switches. Three
+      distinct themes to frontend-design standards — Atelier (editorial/pro), Sanctuary
+      (warm/church/nonprofit), Storefront (bold/restaurant/retail) — with auto-selection
+      by industry+tone. (6–10 themes: 3 shipped, framework scales to more.)
+- [x] Palette resolver (`palette.ts`): explicit hex > scraped brand color > tone default,
+      WCAG-readable ink; content copy (`content.ts`): Claude with a deterministic fallback
+      so **no lorem ipsum ever reaches a preview** even without an API key.
+- [x] Bundle assembly (`bundle.ts`): self-contained HTML + copied confirmed images to R2
+      under `builds/<id>/`; snapshot in `builds.spec_json`; versioned `builds` row.
+- [x] Content-ethics gate enforced: only `source_content` rows with review_status
+      `confirmed`/`edited` feed generation; images only when a source is confirmed.
+- [x] Preview served from R2 at `/preview/:buildId/`; operator dashboard has Generate +
+      versioned build list with preview links.
+- [x] **Verified end-to-end** in `wrangler dev`: interview → ingest → confirm → generate →
+      preview renders real copy, SEO/JSON-LD, images served from R2. 8 generate unit tests
+      (26 total).
+- [x] **Adversarial reviewer pass (NO-GO → fixed → GO):** closed a stored-XSS via
+      unescaped JSON-LD (`jsonLdSafe`), a content-ethics gap where confirming one text
+      source published all scraped images (added per-asset `review_status` +
+      `PATCH /api/assets/:id` + approval UI; migration `0002`), a build version race
+      (reserve row `building` → write R2 → flip `ready`), and WCAG contrast (brand/accent
+      adjusted to AA as text via `adjustForContrast`). Added href-scheme allowlist,
+      empty-meta fallback, and 400 on unknown `themeId`. 30 unit tests; re-verified e2e.
+- [ ] Deferred to Phase 4: preview on its own `preview-{id}` subdomain + real deploy
+      (needs Cloudflare creds); multi-page output; automated Lighthouse gate.
 
 ## Phase 4 — Revision & Production Deploy  ⬜ TODO
 

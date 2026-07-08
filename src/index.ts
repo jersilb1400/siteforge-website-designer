@@ -8,6 +8,7 @@ import { health } from './routes/health';
 import { projects } from './routes/projects';
 import { interview } from './routes/interview';
 import { ingest } from './routes/ingest';
+import { generate } from './routes/generate';
 import { handleQueue } from './queue/consumer';
 import { SAMPLE_BUSINESS_HTML } from './dev/fixtures';
 
@@ -33,7 +34,25 @@ api.route('/', health);
 api.route('/projects', projects);
 api.route('/interview', interview);
 api.route('/', ingest);
+api.route('/', generate);
 app.route('/api', api);
+
+// Preview server: stream a generated build's files from R2. Public so clients
+// can view previews via the shareable link (build ids are unguessable).
+app.get('/preview/:buildId/*', async (c) => {
+  const buildId = c.req.param('buildId');
+  const rest = c.req.path.split(`/preview/${buildId}/`)[1] || '';
+  const key = `builds/${buildId}/${rest === '' ? 'index.html' : rest}`;
+  const obj = await c.env.R2.get(key);
+  if (!obj) return c.notFound();
+  const headers = new Headers();
+  const ct = obj.httpMetadata?.contentType;
+  if (ct) headers.set('content-type', ct);
+  headers.set('cache-control', 'no-cache');
+  return new Response(obj.body, { headers });
+});
+// Bare /preview/:buildId -> index.html
+app.get('/preview/:buildId', (c) => c.redirect(`/preview/${c.req.param('buildId')}/`));
 
 // Dev-only fixture page: lets the ingestion pipeline be verified end-to-end in
 // `wrangler dev` without hitting the public internet. Never served in production.
