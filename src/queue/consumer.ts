@@ -1,32 +1,31 @@
 import type { Env, IngestJob } from '../types';
-import { run } from '../lib/db';
-import { id } from '../lib/id';
+import { ingestWebsite, ingestFacebook, ingestGoogleBusiness } from '../ingest/pipeline';
 
-// Queue consumer for async ingestion jobs. Phase 2 implements the actual
-// Browser Rendering scrape + extraction here; for Phase 0/1 this records the
-// job so the wiring (producer -> queue -> consumer -> D1) is verifiable end to
-// end, and failed messages retry per wrangler.toml's max_retries.
+// Queue consumer for async ingestion jobs. Dispatches each message to the
+// right pipeline step; on failure it calls retry() so the queue redelivers
+// (up to max_retries in wrangler.toml, then the DLQ). Steps are idempotent —
+// re-running replaces the still-pending source_content row.
 
-export async function handleQueue(
-  batch: MessageBatch<IngestJob>,
-  env: Env,
-): Promise<void> {
+export async function handleQueue(batch: MessageBatch<IngestJob>, env: Env): Promise<void> {
   for (const message of batch.messages) {
     const job = message.body;
     try {
-      await run(
-        env,
-        `INSERT INTO job_log (id, project_id, kind, status, detail_json)
-         VALUES (?, ?, ?, 'queued', ?)`,
-        id('job'),
-        job.projectId,
-        job.kind,
-        JSON.stringify(job),
-      );
-      // TODO(Phase 2): dispatch on job.kind to the scrape/extract pipeline.
+      switch (job.kind) {
+        case 'scrape_website':
+          await ingestWebsite(env, job.projectId, job.url);
+          break;
+        case 'scrape_facebook':
+          await ingestFacebook(env, job.projectId, job.url);
+          break;
+        case 'scrape_google_business':
+          await ingestGoogleBusiness(env, job.projectId, job.query);
+          break;
+        default:
+          // Exhaustiveness guard — unknown kinds are acked, not retried forever.
+          console.error('unknown ingest job', { job });
+      }
       message.ack();
     } catch (err) {
-      // Let the queue retry; surface the reason in logs for observability.
       console.error('ingest job failed', { kind: job.kind, projectId: job.projectId, err: String(err) });
       message.retry();
     }

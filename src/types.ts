@@ -29,6 +29,9 @@ export interface Env {
   ENVIRONMENT: string;
   ANTHROPIC_MODEL_SMART: string;
   ANTHROPIC_MODEL_CHEAP: string;
+  // 'true' to route scraping through Browser Rendering (requires paid plan +
+  // renderWithBrowser implemented); anything else uses the fetch fallback.
+  USE_BROWSER_RENDERING?: string;
 
   // Secrets (wrangler secret put / .dev.vars).
   ANTHROPIC_API_KEY?: string;

@@ -120,6 +120,15 @@ async function openProject(id) {
             <a class="btn ghost" href="${escapeHtml(link)}" target="_blank" rel="noopener">Open</a>
           </div>
         </div>` : `<p class="muted">No interview session on this project.</p>`}
+
+        <div>
+          <div class="row" style="justify-content:space-between;">
+            <span class="eyebrow">web presence</span>
+            <button class="btn" id="run-ingest" style="padding:0.45rem 0.85rem;font-size:0.85rem;">Pull from web presence</button>
+          </div>
+          <p class="muted" style="font-size:0.88rem;margin:0.5rem 0 0;">Scrapes the client's website, Facebook, and Google listing from their interview answers. Nothing is used until you confirm it below.</p>
+          <div id="ingest-panel" style="margin-top:1rem;" aria-live="polite"></div>
+        </div>
       </div>`;
 
     el('back').addEventListener('click', loadProjects);
@@ -128,8 +137,87 @@ async function openProject(id) {
       try { await navigator.clipboard.writeText(link); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy'), 1500); }
       catch { el('link').select(); }
     });
+    el('run-ingest').addEventListener('click', () => runIngest(project.id));
+    loadIngestion(project.id);
   } catch (e) {
     list.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+const CONFIDENCE_LABEL = { high: 'reliable', best_effort: 'best-effort', manual: 'needs your input' };
+
+async function runIngest(projectId) {
+  const btn = el('run-ingest');
+  const panel = el('ingest-panel');
+  btn.disabled = true; btn.textContent = 'Pulling…';
+  try {
+    const r = await api(`/api/projects/${projectId}/ingest`, { method: 'POST', body: '{}' });
+    panel.innerHTML = `<div class="notice">Queued: ${r.enqueued.map(escapeHtml).join(', ')}. Results appear below in a moment.</div>`;
+    // Poll a few times while the queue processes.
+    for (let i = 0; i < 8; i++) { await new Promise((res) => setTimeout(res, 3000)); if (await loadIngestion(projectId)) break; }
+  } catch (e) {
+    panel.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Pull from web presence';
+  }
+}
+
+async function loadIngestion(projectId) {
+  const panel = el('ingest-panel');
+  if (!panel) return false;
+  try {
+    const { items } = await api(`/api/projects/${projectId}/source-content`);
+    if (!items.length) { panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No ingested content yet.</p>`; return false; }
+    panel.innerHTML = items.map((it) => sourceCard(it)).join('');
+    panel.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.confirm, 'confirmed')));
+    panel.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.reject, 'rejected')));
+    return true;
+  } catch (e) {
+    panel.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+    return false;
+  }
+}
+
+function sourceCard(it) {
+  const d = it.data || {};
+  const status = escapeHtml(it.reviewStatus);
+  const conf = CONFIDENCE_LABEL[it.confidence] || it.confidence;
+  const facts = [];
+  if (d.businessName) facts.push(['Name', d.businessName]);
+  if (d.description) facts.push(['Description', d.description]);
+  if (d.emails && d.emails.length) facts.push(['Email', d.emails.join(', ')]);
+  if (d.phones && d.phones.length) facts.push(['Phone', d.phones.join(', ')]);
+  if (d.addresses && d.addresses.length) facts.push(['Address', d.addresses.join(' · ')]);
+  if (d.savedAssetCount != null) facts.push(['Images saved', String(d.savedAssetCount)]);
+  if (d.note) facts.push(['Note', d.note]);
+  const palette = (d.palette || []).map((c) => `<span title="${escapeHtml(c)}" style="display:inline-block;width:20px;height:20px;border-radius:4px;border:1px solid var(--line);background:${escapeHtml(c)}"></span>`).join('');
+  const decided = it.reviewStatus === 'confirmed' || it.reviewStatus === 'edited' || it.reviewStatus === 'rejected';
+  return `
+    <div class="card" style="padding:1.1rem;margin-bottom:0.75rem;">
+      <div class="row" style="justify-content:space-between;">
+        <div class="row" style="gap:0.5rem;">
+          <span class="eyebrow" style="margin:0;">${escapeHtml(it.sourceType.replace(/_/g,' '))}</span>
+          <span class="pill">${escapeHtml(conf)}</span>
+        </div>
+        <span class="pill ${status === 'confirmed' || status === 'edited' ? 'ready' : ''}">${status}</span>
+      </div>
+      ${facts.map(([k, v]) => `<div style="display:grid;grid-template-columns:110px 1fr;gap:0.75rem;padding:0.4rem 0;border-top:1px solid var(--line);font-size:0.9rem;">
+        <span class="mono muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(k)}</span>
+        <span>${escapeHtml(String(v))}</span></div>`).join('')}
+      ${palette ? `<div style="display:flex;gap:0.35rem;margin-top:0.6rem;">${palette}</div>` : ''}
+      ${decided ? '' : `<div class="row" style="margin-top:0.85rem;">
+        <button class="btn primary" style="padding:0.45rem 0.9rem;font-size:0.85rem;" data-confirm="${escapeHtml(it.id)}">Confirm</button>
+        <button class="btn ghost" style="padding:0.45rem 0.9rem;font-size:0.85rem;" data-reject="${escapeHtml(it.id)}">Reject</button>
+      </div>`}
+    </div>`;
+}
+
+async function reviewSource(projectId, sourceId, status) {
+  try {
+    await api(`/api/source-content/${sourceId}`, { method: 'PATCH', body: JSON.stringify({ reviewStatus: status }) });
+    loadIngestion(projectId);
+  } catch (e) {
+    el('ingest-panel').insertAdjacentHTML('afterbegin', `<div class="notice">${escapeHtml(e.message)}</div>`);
   }
 }
 

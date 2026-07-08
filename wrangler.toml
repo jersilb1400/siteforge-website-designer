@@ -62,6 +62,9 @@ ENVIRONMENT = "development"
 # Non-secret model routing defaults; override per-environment as needed.
 ANTHROPIC_MODEL_SMART = "claude-sonnet-5"
 ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001"
+# Scraping uses a plain-fetch renderer by default. Flip to "true" only after
+# wiring Browser Rendering (renderWithBrowser + paid plan). See src/ingest/render.ts.
+USE_BROWSER_RENDERING = "false"
 
 # Production environment overrides. Deploy with: wrangler deploy --env production
 [env.production]

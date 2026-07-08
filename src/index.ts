@@ -7,7 +7,9 @@ import { id } from './lib/id';
 import { health } from './routes/health';
 import { projects } from './routes/projects';
 import { interview } from './routes/interview';
+import { ingest } from './routes/ingest';
 import { handleQueue } from './queue/consumer';
+import { SAMPLE_BUSINESS_HTML } from './dev/fixtures';
 
 // SiteForge Worker entry. Owns /api/*; everything else falls through to static
 // assets (the dashboard + generated-site previews) via the ASSETS binding.
@@ -30,7 +32,23 @@ const api = new Hono<{ Bindings: Env; Variables: Vars }>();
 api.route('/', health);
 api.route('/projects', projects);
 api.route('/interview', interview);
+api.route('/', ingest);
 app.route('/api', api);
+
+// Dev-only fixture page: lets the ingestion pipeline be verified end-to-end in
+// `wrangler dev` without hitting the public internet. Never served in production.
+app.get('/__fixtures/sample-business', (c) => {
+  if (c.env.ENVIRONMENT !== 'development') return c.notFound();
+  return c.html(SAMPLE_BUSINESS_HTML);
+});
+// A tiny real PNG so the asset-download path (fetch -> R2) is exercised locally.
+app.get('/__fixtures/img/:name', (c) => {
+  if (c.env.ENVIRONMENT !== 'development') return c.notFound();
+  // 1x1 transparent PNG.
+  const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+  return c.body(bytes, 200, { 'content-type': 'image/png' });
+});
 
 // --- Errors: typed AppErrors -> clean JSON; everything else -> 500 ---
 app.onError((err, c) => {

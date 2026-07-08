@@ -15,7 +15,7 @@ done, what is *verified*, and what is next.
 |---|---|---|
 | 0 | Foundation | **Implemented & locally verified.** `tsc` clean, `wrangler deploy --dry-run` bundles all bindings, `wrangler dev` serves `/api/health` + `/api/ready` (D1+KV live). Real production `wrangler deploy` pending Jeremy's Cloudflare credentials + provisioned binding IDs. |
 | 1 | Interview Engine | **Implemented & verified end-to-end** against local D1 via `wrangler dev` (create project → 20-question adaptive interview → structured JSON profile; status advanced to `ingesting`; resume is idempotent). Only AI *enrichment* (industry page suggestions, thin-answer follow-ups) is unverified, pending a live `ANTHROPIC_API_KEY`. |
-| 2 | Ingestion Pipeline | TODO |
+| 2 | Ingestion Pipeline | **Implemented & locally verified.** URL → queue → HTMLRewriter extract → R2 images → normalized `source_content` → confirm/reject gate, verified end-to-end in `wrangler dev`. Browser Rendering path is a documented stub (paid plan); fetch fallback ships. |
 | 3 | Generation Engine | TODO |
 | 4 | Revision & Production Deploy | TODO |
 | 5 | Polish & Extend | TODO |
@@ -78,23 +78,34 @@ an interview to completion, and confirm structured JSON output. Needs a live
 
 ---
 
-## Phase 2 — Ingestion Pipeline  ⬜ TODO
+## Phase 2 — Ingestion Pipeline  ✅ implemented & locally verified
 
-Deliverable: paste a URL → get reviewed, structured content in `source_content`.
-- [ ] Browser Rendering scrape worker driven by `INGEST_QUEUE`; flesh out the
-      `TODO(Phase 2)` dispatch in `src/queue/consumer.ts` by `IngestJob.kind`.
-- [ ] Website extractor: text content, page structure, meta tags, dominant color
-      palette from a screenshot, contact details.
-- [ ] Image pipeline: download to R2 under hygienic, project-scoped keys; index rows in
-      `assets` (mime, dims, alt, source_url).
-- [ ] Facebook tiered ingestion: (a) Graph API if connected [ESCALATE: app review],
-      (b) best-effort public scrape marked low-confidence, (c) manual paste/upload
-      fallback. Degrade gracefully; never present (b) as reliable.
-- [ ] Google Business Profile: public hours/reviews/photos where permitted; honor
-      robots.txt for non-client properties; never scrape behind logins.
-- [ ] Client review/confirm UI: nothing publishes until
-      `source_content.review_status = confirmed`.
-- [ ] Verify: enqueue a real URL, confirm normalized rows + assets, run reviewer → GO.
+Deliverable: paste a URL → get reviewed, structured content in `source_content`. **Met.**
+- [x] Scrape worker driven by `INGEST_QUEUE`; `src/queue/consumer.ts` dispatches by
+      `IngestJob.kind` with ack/retry → DLQ.
+- [x] Website extractor (`src/ingest/extract.ts`) via Workers HTMLRewriter: business
+      name, meta/OG, headings, contact details (`contact.ts`), socials, candidate color
+      palette ranked brand-over-neutral (`color.ts`).
+- [x] Image pipeline (`src/ingest/assets.ts`): download to R2 under project-scoped keys
+      (`projects/<id>/scraped/<assetId>.<ext>`), size/count/mime guards, indexed in `assets`.
+- [x] Renderer with graceful degradation (`src/ingest/render.ts`): fetch path (default,
+      deployable) + Browser Rendering upgrade seam gated by `USE_BROWSER_RENDERING`;
+      robots.txt honored for non-client properties (client's own site bypasses).
+- [x] Facebook tiered ingestion (`pipeline.ts`): (a) Graph API [later — ESCALATE: app
+      review], (b) best-effort public scrape marked low-confidence, (c) manual fallback.
+      Verified: an un-scrapable page degrades to the `manual` tier, never oversold.
+- [x] Google Business: best-effort public listing else manual fallback.
+- [x] Review API + operator UI: `PATCH /api/source-content/:id` gate; dashboard shows
+      each source with confidence + Confirm/Reject. Nothing is used until
+      `review_status` is `confirmed`/`edited`.
+- [x] **Verified end-to-end** in `wrangler dev`: ingest a fixture URL → queue → extract →
+      3 images stored in R2 → normalized `source_content` (name/email/phone/address/
+      socials/palette) → confirm/edit gate. 9 ingest unit tests green (18 total).
+
+**Browser Rendering caveat:** the real Browser Rendering path (`renderWithBrowser`) is a
+documented stub — it needs the paid Workers plan + `@cloudflare/puppeteer`, which can't be
+exercised in this environment. The fetch fallback covers server-rendered sites; JS-heavy
+sites need the seam implemented + `USE_BROWSER_RENDERING=true`.
 
 ## Phase 3 — Generation Engine  ⬜ TODO
 
