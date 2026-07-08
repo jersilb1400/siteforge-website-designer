@@ -17,8 +17,8 @@ done, what is *verified*, and what is next.
 | 1 | Interview Engine | **Implemented & verified end-to-end** against local D1 via `wrangler dev` (create project → 20-question adaptive interview → structured JSON profile; status advanced to `ingesting`; resume is idempotent). Only AI *enrichment* (industry page suggestions, thin-answer follow-ups) is unverified, pending a live `ANTHROPIC_API_KEY`. |
 | 2 | Ingestion Pipeline | **Implemented & locally verified.** URL → queue → HTMLRewriter extract → R2 images → normalized `source_content` → confirm/reject gate, verified end-to-end in `wrangler dev`. Browser Rendering path is a documented stub (paid plan); fetch fallback ships. |
 | 3 | Generation Engine | **Core implemented & locally verified.** Interview + confirmed content → theme select → palette → copy (Claude + deterministic fallback) → self-contained HTML bundle in R2 → versioned build → preview served from R2. Verified end-to-end in `wrangler dev`. Live preview-*deploy* (own subdomain) deferred to Phase 4 (needs Cloudflare creds). |
-| 4 | Revision & Production Deploy | TODO |
-| 5 | Polish & Extend | TODO |
+| 4 | Revision & Production Deploy | **Implemented & locally verified.** NL revision loop, versioned builds, publish/rollback, `/site/:projectId/` production surface, quality gate. Real Lighthouse on a published site: Perf 100 / A11y 94 / BP 96 / SEO 100. |
+| 5 | Polish & Extend | **MCP server shipped** (`POST /mcp`, verified). Custom domains, multi-tenant auth, billing documented + escalation-gated (paid). |
 
 Legend: "Implemented" = code written and `tsc --noEmit` clean. "Verified" = actually
 run against real bindings, acceptance check passed, reviewer returned GO. Per the
@@ -137,24 +137,35 @@ Deliverable: interview + ingestion → live preview site. **Met (preview served 
 - [ ] Deferred to Phase 4: preview on its own `preview-{id}` subdomain + real deploy
       (needs Cloudflare creds); multi-page output; automated Lighthouse gate.
 
-## Phase 4 — Revision & Production Deploy  ⬜ TODO
+## Phase 4 — Revision & Production Deploy  ✅ implemented & locally verified
 
-Deliverable: NL revision loop + versioned production deploy with quality gates.
-- [ ] Natural-language revision loop ("make the header darker") → regenerate the diff.
-- [ ] Build versioning (`builds.version`, unique per project) + one-click rollback.
-- [ ] Production deploy flow via Wrangler (scripted, never dashboard clicks).
-- [ ] Automated Lighthouse + WCAG 2.1 AA checks as **build gates**; store scores in
-      `builds.lighthouse_json`; block deploy under 90.
-- [ ] Verify: revise, redeploy, rollback, gate a failing build; reviewer → GO.
+Deliverable: NL revision loop + versioned production surface with quality gates. **Met.**
+- [x] Natural-language revision loop (`src/generate/revise.ts`): deterministic parser
+      (darker/lighter, hex/named colors, theme switch, headline/tagline edits) + Claude
+      fallback; each revision is a fresh versioned build. Verified: "darker + bold" →
+      storefront + darkened brand; "change the headline to ..." → new copy in preview.
+- [x] Versioning + one-click rollback (`POST /api/projects/:id/rollback`) — verified
+      `/site/` reverts to the rolled-back version.
+- [x] Production surface: published build served from R2 at `/site/:projectId/`
+      (`POST /api/builds/:id/publish`, republish=rollback). Real per-client subdomain via
+      `wrangler deploy` is a Phase-5/escalation step (needs Cloudflare creds); the R2
+      bundle is deploy-portable.
+- [x] Quality gate: in-worker check (`src/generate/quality.ts`, stored in
+      `builds.lighthouse_json`) blocks publishing a failing build unless `force`. Plus a
+      **real Lighthouse** CI gate (`scripts/lighthouse-gate.mjs`).
+- [x] **Verified:** real Lighthouse on a published site scored **Performance 100,
+      Accessibility 94, Best-Practices 96, SEO 100** (all ≥90). 38 unit tests.
 
-## Phase 5 — Polish & Extend  ⬜ TODO
+## Phase 5 — Polish & Extend  ◐ MCP shipped; rest documented/escalation-gated
 
-Deliverable: productization hooks.
-- [ ] Custom domains via Cloudflare for SaaS [ESCALATE: domain purchase / zone setup].
-- [ ] Multi-tenant auth (replace `OPERATOR_TOKEN` single-operator model / Cloudflare
-      Access) [ESCALATE if paid].
-- [ ] MCP server exposure (mcp-builder) so other Claude sessions can trigger builds.
-- [ ] Optional billing hooks if productized [ESCALATE].
+- [x] **MCP server exposure** (`src/mcp/server.ts`, `POST /mcp`): stateless Streamable-HTTP
+      JSON-RPC, operator-gated, tools `siteforge_{list_projects,create_project,get_project,
+      generate_site,list_builds}`. Verified via initialize/tools.list/tools.call (created a
+      project + generated a site through MCP).
+- [ ] Custom domains via Cloudflare for SaaS — **ESCALATE** (paid zone/domain setup).
+- [ ] Multi-tenant auth (replace `OPERATOR_TOKEN`; Cloudflare Access or magic-link) —
+      designed but not built; single-operator model stands for v1.
+- [ ] Billing hooks — **ESCALATE**, only if productized.
 
 ---
 

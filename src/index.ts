@@ -10,6 +10,8 @@ import { interview } from './routes/interview';
 import { ingest } from './routes/ingest';
 import { generate } from './routes/generate';
 import { handleQueue } from './queue/consumer';
+import { handleMcp } from './mcp/server';
+import { requireOperator } from './middleware/auth';
 import { SAMPLE_BUSINESS_HTML } from './dev/fixtures';
 
 // SiteForge Worker entry. Owns /api/*; everything else falls through to static
@@ -37,6 +39,18 @@ api.route('/', ingest);
 api.route('/', generate);
 app.route('/api', api);
 
+// MCP server (Streamable HTTP, stateless JSON). Lets other Claude sessions drive
+// SiteForge. Operator-token gated. One JSON-RPC request per POST.
+app.post('/mcp', requireOperator, async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || body.jsonrpc !== '2.0' || typeof body.method !== 'string') {
+    return c.json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid JSON-RPC request.' } }, 400);
+  }
+  const res = await handleMcp(c.env, body);
+  if (res === null) return c.body(null, 202); // notification ack
+  return c.json(res);
+});
+
 // Preview server: stream a generated build's files from R2. Public so clients
 // can view previews via the shareable link (build ids are unguessable).
 app.get('/preview/:buildId/*', async (c) => {
@@ -53,6 +67,27 @@ app.get('/preview/:buildId/*', async (c) => {
 });
 // Bare /preview/:buildId -> index.html
 app.get('/preview/:buildId', (c) => c.redirect(`/preview/${c.req.param('buildId')}/`));
+
+// Published-site server: the v1 "production" surface. Serves whichever build a
+// project has published, from R2. (A per-client subdomain via Cloudflare for
+// SaaS is a later, escalation-gated step; the bundle in R2 is deploy-portable.)
+app.get('/site/:projectId/*', async (c) => {
+  const projectId = c.req.param('projectId');
+  const project = await c.env.DB.prepare('SELECT published_build_id FROM projects WHERE id = ?')
+    .bind(projectId)
+    .first<{ published_build_id: string | null }>();
+  if (!project?.published_build_id) return c.notFound();
+  const rest = c.req.path.split(`/site/${projectId}/`)[1] || '';
+  const key = `builds/${project.published_build_id}/${rest === '' ? 'index.html' : rest}`;
+  const obj = await c.env.R2.get(key);
+  if (!obj) return c.notFound();
+  const headers = new Headers();
+  const ct = obj.httpMetadata?.contentType;
+  if (ct) headers.set('content-type', ct);
+  headers.set('cache-control', 'public, max-age=300');
+  return new Response(obj.body, { headers });
+});
+app.get('/site/:projectId', (c) => c.redirect(`/site/${c.req.param('projectId')}/`));
 
 // Dev-only fixture page: lets the ingestion pipeline be verified end-to-end in
 // `wrangler dev` without hitting the public internet. Never served in production.
