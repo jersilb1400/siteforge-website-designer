@@ -25,6 +25,20 @@ run against real bindings, acceptance check passed, reviewer returned GO. Per th
 phase-gating rule, Phase 2 does not start until Phase 0 + 1 are **verified** (which
 requires Jeremy's Cloudflare account — see escalation below).
 
+### Acceptance / user-simulation testing (2026-07-08)
+
+A full simulation battery was run against `wrangler dev` (happy paths + adversarial
++ security + MCP edge cases): **20/20 checks pass.** Highlights:
+- **Security:** an XSS payload (`</script><script>alert(1)</script>` + `<img onerror>`)
+  submitted as interview content is fully HTML-escaped in the generated preview — no
+  live `<script>` or `<img onerror>` reaches the page.
+- **Validation/auth:** empty required answer → 400; bogus session → 404; operator route
+  with no/wrong token → 401; unknown `themeId` → 400; generate-before-interview → 400.
+- **MCP:** initialize/tools.list (5 tools) OK; unknown tool, missing args, generate
+  before interview, and bogus project all return graceful `isError` (no crash); no-auth
+  → 401; malformed JSON-RPC → 400.
+- **Quality:** real Lighthouse on a published site — Perf 100 / A11y 94 / BP 96 / SEO 100.
+
 ---
 
 ## Phase 0 — Foundation  ✅ implemented (verification pending Cloudflare creds)
