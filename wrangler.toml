@@ -24,13 +24,13 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "siteforge-db"
-database_id = "PLACEHOLDER_D1_DATABASE_ID"
+database_id = "ffbe721f-ccaa-47ef-b701-144de8c886e8"
 migrations_dir = "migrations"
 
 # --- KV: sessions, scrape cache, rate limiting ---
 [[kv_namespaces]]
 binding = "KV"
-id = "PLACEHOLDER_KV_NAMESPACE_ID"
+id = "fad0d34f51d2489c96c9ccd0ff9f58c8"
 
 # --- R2: site bundles, scraped assets, images, versioned backups ---
 [[r2_buckets]]
