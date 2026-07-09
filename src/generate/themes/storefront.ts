@@ -8,7 +8,7 @@ export const storefront: Theme = {
   id: 'storefront',
   name: 'Storefront',
   suits: {
-    industries: ['Restaurant / Cafe', 'Retail / shop', 'Home & trade services'],
+    industries: ['Restaurant / Cafe', 'Retail / shop'],
     tones: ['Bold'],
   },
   fonts: {

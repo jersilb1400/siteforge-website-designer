@@ -9,6 +9,7 @@ import { generateContent, type ContentInputs } from './content';
 import { renderSite } from './render';
 import { sectionsForPages, type SiteSpec, type SiteImage } from './spec';
 import { qualityCheck } from './quality';
+import { deriveDesign } from './design-director';
 
 // Orchestrates a build: interview profile + CONFIRMED source content -> spec ->
 // rendered, self-contained bundle in R2 -> versioned `builds` row. Spec assembly
@@ -73,14 +74,25 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
   );
   const { merged } = mergeConfirmed(sourceRows);
 
+  if (themeOverride && !themeExists(themeOverride)) throw new BadRequest(`Unknown themeId "${themeOverride}".`);
+  const theme = themeOverride ? getTheme(themeOverride) : selectTheme(profile.business.industry, profile.tone);
+
+  // Design director: bespoke, guardrailed art direction (fonts/signature/colors).
+  // No-ops (null) without an API key — the theme defaults then stand.
+  const design = await deriveDesign(
+    env,
+    { name: profile.business.name, industry: profile.business.industry, tone: profile.tone, story: profile.business.story },
+    theme,
+  );
+
+  // Palette: the design director's brand/accent win when present (validated
+  // hex), else fall back to explicit interview colors / scrape / tone default.
   const palette = resolvePalette({
-    brandColors: profile.brand.colors,
-    generatePalette: profile.brand.generatePalette,
+    brandColors: design?.brand ? `${design.brand} ${design.accent ?? ''}` : profile.brand.colors,
+    generatePalette: design?.brand ? false : profile.brand.generatePalette,
     scrapedPalette: merged.palette,
     tone: profile.tone,
   });
-  if (themeOverride && !themeExists(themeOverride)) throw new BadRequest(`Unknown themeId "${themeOverride}".`);
-  const theme = themeOverride ? getTheme(themeOverride) : selectTheme(profile.business.industry, profile.tone);
 
   const contentInputs: ContentInputs = { profile, confirmed: merged };
   const content = await generateContent(env, contentInputs);
@@ -88,6 +100,9 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
   return {
     projectId,
     themeId: theme.id,
+    ...(design
+      ? { design: { fontDisplay: design.fontDisplay, fontBody: design.fontBody, fontHref: design.fontHref, signatureCss: design.signatureCss, rationale: design.rationale } }
+      : {}),
     business: {
       name: profile.business.name,
       tagline: profile.business.tagline,

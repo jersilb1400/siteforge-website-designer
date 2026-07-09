@@ -7,8 +7,12 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 import { sectionsForPages } from '../src/generate/spec';
-import { selectTheme } from '../src/generate/themes';
+import { selectTheme, THEMES } from '../src/generate/themes';
 import { jsonLdSafe, safeHref, esc } from '../src/generate/html';
+import { resolveDesign, FONT_PAIRINGS, SIGNATURES } from '../src/generate/design-director';
+import { renderSite } from '../src/generate/render';
+import { resolvePalette as rp } from '../src/generate/palette';
+import type { SiteSpec } from '../src/generate/spec';
 
 describe('output safety (reviewer HIGH findings)', () => {
   it('jsonLdSafe neutralizes </script> breakout from scraped values', () => {
@@ -78,10 +82,73 @@ describe('section mapping', () => {
   });
 });
 
+describe('design director (guardrailed)', () => {
+  it('resolves a valid pick from the curated pools', () => {
+    const d = resolveDesign({ fontPairing: 'editorial', signature: 'accent-rule', brand: '#0F766E', accent: '#F59E0B', rationale: 'x' });
+    expect(d).not.toBeNull();
+    expect(d!.fontDisplay).toBe(FONT_PAIRINGS['editorial']!.display);
+    expect(d!.signatureCss).toBe(SIGNATURES['accent-rule']!);
+    expect(d!.brand).toBe('#0f766e'); // lowercased + validated
+  });
+
+  it('rejects an unknown font pairing (no arbitrary CSS/fonts)', () => {
+    expect(resolveDesign({ fontPairing: 'comic-sans-deluxe', signature: 'accent-rule' })).toBeNull();
+  });
+
+  it('drops invalid hex colors and unknown signatures rather than injecting them', () => {
+    const d = resolveDesign({ fontPairing: 'grotesque', signature: 'evil{}</style>', brand: 'red; }', accent: '#zzzzzz' });
+    expect(d).not.toBeNull();
+    expect(d!.brand).toBeUndefined();
+    expect(d!.accent).toBeUndefined();
+    expect(d!.signatureCss).toBe(''); // unknown signature -> empty, not injected
+  });
+});
+
+describe('design override reaches the rendered HTML', () => {
+  function specWithDesign(): SiteSpec {
+    return {
+      projectId: 'p', themeId: 'storefront',
+      business: { name: 'Acme', tagline: 't', industry: 'Retail / shop', tone: 'Bold', story: 's' },
+      contact: { email: 'a@b.co', phone: '', address: '', hours: '', socials: {} },
+      sections: [{ id: 'home', label: 'Home' }, { id: 'contact', label: 'Contact' }],
+      palette: rp({ brandColors: '#1f4fa8', tone: 'Bold' }),
+      images: [], content: {
+        heroHeadline: 'H', heroSub: 'S', heroCtaLabel: 'Go', heroCtaHref: '#contact',
+        aboutTitle: 'About', aboutBody: ['x'], servicesTitle: 'What', services: [{ name: 's', desc: 'd' }],
+        highlights: [], ctaTitle: 'C', ctaBody: 'b',
+      },
+      design: {
+        fontDisplay: FONT_PAIRINGS['elegant']!.display,
+        fontBody: FONT_PAIRINGS['elegant']!.body,
+        fontHref: FONT_PAIRINGS['elegant']!.href,
+        signatureCss: SIGNATURES['framed-cards']!,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+  it('applies the bespoke font link + signature CSS on top of the theme', () => {
+    const { files } = renderSite(specWithDesign());
+    const html = files['index.html']!;
+    expect(html).toContain('Cormorant+Garamond'); // design font link, not the theme default
+    expect(html).toContain(SIGNATURES['framed-cards']!); // signature treatment present
+  });
+});
+
 describe('theme selection', () => {
-  it('matches industry first', () => {
+  it('matches industry first, across the expanded library', () => {
     expect(selectTheme('Church / Ministry', 'Bold').id).toBe('sanctuary');
     expect(selectTheme('Restaurant / Cafe', 'Minimal').id).toBe('storefront');
+    expect(selectTheme('Health & wellness', 'Warm').id).toBe('meridian');
+    expect(selectTheme('Home & trade services', 'Bold').id).toBe('forge');
+    expect(selectTheme('Nonprofit', 'Professional').id).toBe('ledger');
+    expect(selectTheme('Personal brand / portfolio', 'Minimal').id).toBe('gallery');
+  });
+  it('industry claims are mutually exclusive (deterministic auto-select)', () => {
+    const seen = new Set<string>();
+    for (const t of THEMES) for (const ind of t.suits.industries ?? []) {
+      expect(seen.has(ind)).toBe(false);
+      seen.add(ind);
+    }
   });
   it('falls back to default for unknown industry/tone', () => {
     expect(selectTheme('Something else', undefined).id).toBe('atelier');

@@ -8,7 +8,7 @@ export const sanctuary: Theme = {
   id: 'sanctuary',
   name: 'Sanctuary',
   suits: {
-    industries: ['Church / Ministry', 'Nonprofit', 'Health & wellness'],
+    industries: ['Church / Ministry'],
     tones: ['Warm'],
   },
   fonts: {

@@ -49,6 +49,14 @@ export interface SiteSpec {
   palette: PaletteTokens;
   images: SiteImage[];
   content: GeneratedContent;
+  // Optional bespoke design-director overrides layered on the theme skeleton.
+  design?: {
+    fontDisplay: string;
+    fontBody: string;
+    fontHref: string;
+    signatureCss: string;
+    rationale?: string;
+  };
   generatedAt: string;
 }
 

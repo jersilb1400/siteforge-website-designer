@@ -13,9 +13,16 @@ export interface RenderedBundle {
 
 export function renderSite(spec: SiteSpec): RenderedBundle {
   const theme = getTheme(spec.themeId);
-  const css = theme.css(spec.palette);
-  const fontLink = theme.fonts.googleHref
-    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${theme.fonts.googleHref}" rel="stylesheet">`
+  // Bespoke design-director overrides (fonts + signature) layer AFTER the theme
+  // CSS so they win, without touching the theme's tested structural rules.
+  const d = spec.design;
+  const overrideCss = d
+    ? `:root{--font-display:${d.fontDisplay};--font-body:${d.fontBody}}\n${d.signatureCss}`
+    : '';
+  const css = theme.css(spec.palette) + overrideCss;
+  const fontHref = d?.fontHref || theme.fonts.googleHref;
+  const fontLink = fontHref
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${fontHref}" rel="stylesheet">`
     : '';
 
   const html = `<!doctype html>

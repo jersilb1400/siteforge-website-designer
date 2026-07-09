@@ -8,7 +8,7 @@ export const atelier: Theme = {
   id: 'atelier',
   name: 'Atelier',
   suits: {
-    industries: ['Professional services (law, accounting, consulting)', 'Personal brand / portfolio', 'Health & wellness'],
+    industries: ['Professional services (law, accounting, consulting)'],
     tones: ['Professional', 'Minimal'],
   },
   fonts: {
