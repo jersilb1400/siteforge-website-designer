@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiteForge — How to create a website</title>
+  <meta name="description" content="Five simple steps to forge a client website with SiteForge — from first question to live site in under 30 minutes." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --ink:#191a1d;--ink-soft:#33363b;--paper:#f6f5f2;--surface:#fff;
+      --steel:#71757c;--line:#e4e2dc;--line-strong:#d3d1c9;
+      --ember:#e14318;--ember-deep:#b02f0c;--ember-tint:#fbe9e2;--ok:#2e7d5b;
+      --font-display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+      --font-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:var(--font-display);color:var(--ink);background-color:var(--paper);
+      background-image:linear-gradient(to right,rgba(25,26,29,.035) 1px,transparent 1px),
+                       linear-gradient(to bottom,rgba(25,26,29,.035) 1px,transparent 1px);
+      background-size:28px 28px;line-height:1.5;-webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:760px;margin:0 auto;padding:clamp(2rem,6vw,4rem) 1.25rem 3rem}
+    .eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--steel);display:inline-flex;align-items:center;gap:.5rem}
+    .eyebrow::before{content:'';width:16px;height:2px;background:var(--ember)}
+    .brand{display:inline-flex;align-items:center;gap:.55rem;font-weight:600;font-size:1.1rem;margin-bottom:1.5rem}
+    .brand .mark{width:22px;height:22px;display:grid;place-items:center;background:var(--ink);color:var(--paper);border-radius:5px;font-family:var(--font-mono);font-size:.78rem;font-weight:700;box-shadow:inset 0 -3px 0 var(--ember)}
+    h1{font-size:clamp(2rem,5.5vw,3rem);letter-spacing:-.02em;line-height:1.05;margin:.4rem 0 .6rem}
+    .lede{color:var(--steel);font-size:1.1rem;max-width:52ch;margin:0 0 .4rem}
+    .promise{display:inline-block;margin-top:1rem;font-family:var(--font-mono);font-size:.82rem;color:var(--ember-deep);background:var(--ember-tint);border-radius:999px;padding:.4rem .85rem}
+
+    /* timeline */
+    .steps{list-style:none;margin:2.75rem 0 0;padding:0;position:relative}
+    .steps::before{content:'';position:absolute;left:23px;top:14px;bottom:26px;width:2px;background:linear-gradient(var(--ember),var(--line));}
+    .step{position:relative;padding:0 0 1.5rem 4.25rem;min-height:48px}
+    .step:last-child{padding-bottom:0}
+    .node{position:absolute;left:0;top:0;width:48px;height:48px;border-radius:12px;background:var(--surface);border:2px solid var(--ember);display:grid;place-items:center;font-family:var(--font-mono);font-weight:600;color:var(--ember-deep);box-shadow:0 6px 16px -10px rgba(225,67,24,.6);z-index:1}
+    .step:last-child .node{border-color:var(--ok);color:var(--ok);box-shadow:0 6px 16px -10px rgba(46,125,91,.5)}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 1px 2px rgba(25,26,29,.04),0 10px 24px -16px rgba(25,26,29,.16)}
+    .card h2{font-size:1.15rem;margin:0 0 .3rem;display:flex;align-items:center;gap:.6rem}
+    .card h2 svg{flex:0 0 auto;color:var(--ember)}
+    .card p{margin:0;color:var(--ink-soft);font-size:.98rem}
+    .card .aside{margin-top:.55rem;font-family:var(--font-mono);font-size:.74rem;color:var(--steel)}
+    .foot{margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1.25rem;color:var(--steel);font-family:var(--font-mono);font-size:.75rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+
+    @media (max-width:520px){
+      .step{padding-left:3.5rem}
+      .node{width:40px;height:40px;border-radius:10px}
+      .steps::before{left:19px}
+    }
+    @media (prefers-reduced-motion:no-preference){
+      .step{opacity:0;transform:translateY(10px);animation:rise .5s cubic-bezier(.22,1,.36,1) forwards}
+      .step:nth-child(1){animation-delay:.05s}.step:nth-child(2){animation-delay:.15s}
+      .step:nth-child(3){animation-delay:.25s}.step:nth-child(4){animation-delay:.35s}.step:nth-child(5){animation-delay:.45s}
+      @keyframes rise{to{opacity:1;transform:none}}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand"><span class="mark">SF</span> SiteForge</div>
+    <div class="eyebrow">how it works</div>
+    <h1>Forge a website in five steps</h1>
+    <p class="lede">SiteForge turns a short conversation into a finished, professional site. Here is the whole journey.</p>
+    <span class="promise">⏱ First question → live site in under 30 minutes</span>
+
+    <ol class="steps">
+      <li class="step">
+        <div class="node">01</div>
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>Start a project</h2>
+          <p>Add the client's name. SiteForge creates the project and hands you a private interview link to share.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="node">02</div>
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>The guided interview</h2>
+          <p>The client answers a few smart questions about their business, goals, brand, and tone. It adapts as they go — no blank forms.</p>
+          <div class="aside">saves automatically · resume anytime</div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="node">03</div>
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Review their content</h2>
+          <p>SiteForge pulls in the client's existing website, photos, hours, and details. You confirm exactly what to keep — nothing is used until you approve it.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="node">04</div>
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>Generate the site</h2>
+          <p>A fitting theme, real written copy, and a bespoke color-and-type identity come together into an instant live preview.</p>
+          <div class="aside">Lighthouse 90+ · mobile-ready · accessible</div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="node">05</div>
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5 3 21l4.5-1.5"/><path d="M15 5c3 0 5 2 5 5-3 4-8 6-8 6l-3-3s2-5 6-8z"/><circle cx="15" cy="9" r="1.2"/></svg>Refine, then publish</h2>
+          <p>Change anything in plain English — “make it warmer,” “use the bold theme.” When it's right, publish in one click. Every version is saved, so you can roll back anytime.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="foot"><span>SiteForge · how it works</span><span>built on Cloudflare</span></div>
+  </main>
+</body>
+</html>
