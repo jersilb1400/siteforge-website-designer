@@ -250,8 +250,8 @@ async function finish() {
       <div class="eyebrow" style="justify-content:center;">interview complete</div>
       <h1 style="margin:0.75rem 0 0;">Your brief is forged.</h1>
       <p class="muted" style="max-width:46ch;margin:0.75rem auto 1.25rem;">
-        Thanks${profile && profile.business.name ? `, ${escapeHtml(profile.business.name)}` : ''}. SiteForge has everything it needs to start.
-        Your operator will review the details and generate your first preview.
+        Thanks${profile && profile.business.name ? `, ${escapeHtml(profile.business.name)}` : ''}. The iron is hot — SiteForge has everything it needs.
+        Your operator will temper the details and strike your first preview.
       </p>
       ${profile ? summaryTable(profile) : ''}
       <div class="row" style="justify-content:center;margin-top:1.5rem;">
