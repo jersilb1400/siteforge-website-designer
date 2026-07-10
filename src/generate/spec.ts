@@ -50,6 +50,8 @@ export interface SiteSpec {
   sections: SectionSpec[];
   palette: PaletteTokens;
   images: SiteImage[];
+  /** Confirmed logo asset, baked as media/logo.* in the bundle when present. */
+  logo?: SiteImage;
   content: GeneratedContent;
   // Optional bespoke design-director overrides layered on the theme skeleton.
   design?: {

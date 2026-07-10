@@ -149,19 +149,42 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
 
   try {
     // Content-ethics gate: ONLY individually-approved images may be published.
-    const images: SiteImage[] = [];
-    const assetRows = await all<{ id: string; r2_key: string; alt_text: string | null }>(
+    // Customer uploads (…/uploads/…, …/logo/…) sort ahead of scraped/stock so
+    // provided photos win the hero and gallery.
+    const assetRows = await all<{
+      id: string;
+      r2_key: string;
+      alt_text: string | null;
+      kind: string;
+    }>(
       env,
-      `SELECT id, r2_key, alt_text FROM assets
+      `SELECT id, r2_key, alt_text, kind FROM assets
         WHERE project_id = ? AND review_status IN ('confirmed','edited')
-        ORDER BY created_at ASC LIMIT 12`,
+        ORDER BY
+          CASE WHEN kind = 'logo' THEN 0 ELSE 1 END,
+          CASE WHEN r2_key LIKE '%/uploads/%' OR r2_key LIKE '%/logo/%' THEN 0 ELSE 1 END,
+          created_at ASC
+        LIMIT 16`,
       projectId,
     );
+
+    const images: SiteImage[] = [];
+    let logo: SiteImage | undefined;
     let i = 0;
     for (const a of assetRows) {
       const obj = await env.R2.get(a.r2_key);
       if (!obj) continue;
       const ext = a.r2_key.split('.').pop() || 'bin';
+      if (a.kind === 'logo' && !logo) {
+        const rel = `media/logo.${ext}`;
+        await env.R2.put(`${buildPrefix}/${rel}`, await obj.arrayBuffer(), {
+          httpMetadata: { contentType: obj.httpMetadata?.contentType || 'image/png' },
+        });
+        logo = { src: rel, alt: a.alt_text || `${spec.business.name} logo` };
+        continue;
+      }
+      if (a.kind === 'logo') continue; // only one logo
+      if (images.length >= 12) continue;
       const rel = `media/${i}.${ext}`;
       await env.R2.put(`${buildPrefix}/${rel}`, await obj.arrayBuffer(), {
         httpMetadata: { contentType: obj.httpMetadata?.contentType || 'image/jpeg' },
@@ -169,7 +192,7 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
       images.push({ src: rel, alt: a.alt_text || spec.business.name });
       i++;
     }
-    spec = { ...spec, images, generatedAt: new Date().toISOString() };
+    spec = { ...spec, images, logo, generatedAt: new Date().toISOString() };
 
     const { files } = renderSite(spec);
     for (const [path, body] of Object.entries(files)) {

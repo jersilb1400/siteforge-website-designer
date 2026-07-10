@@ -11,7 +11,12 @@ function authHeaders() {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { headers: authHeaders(), ...opts });
+  const headers = { authorization: `Bearer ${token}` };
+  // Let the browser set multipart boundary for FormData; otherwise send JSON.
+  if (!(opts.body instanceof FormData)) {
+    headers['content-type'] = 'application/json';
+  }
+  const res = await fetch(path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) { signOut(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(data?.error?.message || `Request failed (${res.status}).`);
@@ -20,6 +25,14 @@ async function api(path, opts = {}) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function setOperatorCookie(value) {
+  if (value) {
+    document.cookie = `sf_operator=${encodeURIComponent(value)}; path=/; SameSite=Lax; Secure`;
+  } else {
+    document.cookie = 'sf_operator=; path=/; Max-Age=0; SameSite=Lax; Secure';
+  }
 }
 
 function show(view) {
@@ -31,6 +44,7 @@ function show(view) {
 function signOut() {
   token = '';
   localStorage.removeItem(KEY);
+  setOperatorCookie('');
   show('gate');
 }
 
@@ -42,6 +56,7 @@ async function unlock() {
   try {
     await api('/api/projects'); // validates the token
     localStorage.setItem(KEY, token);
+    setOperatorCookie(token);
     show('app');
     loadProjects();
   } catch (e) {
@@ -151,6 +166,25 @@ async function openProject(id) {
         </div>
 
         <div>
+          <div class="row" style="justify-content:space-between;align-items:center;">
+            <span class="eyebrow">client media</span>
+            <div class="row" style="gap:0.45rem;">
+              <label class="btn ghost" style="padding:0.45rem 0.85rem;font-size:0.85rem;cursor:pointer;margin:0;">
+                Upload logo
+                <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden />
+              </label>
+              <label class="btn primary" style="padding:0.45rem 0.85rem;font-size:0.85rem;cursor:pointer;margin:0;">
+                Upload photos
+                <input type="file" id="upload-photos" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+              </label>
+            </div>
+          </div>
+          <p class="muted" style="font-size:0.88rem;margin:0.5rem 0 0;">Drop in the logo and photos the customer provided. Uploads are auto-approved and used on the next generate (logo in the nav, photos in hero/gallery).</p>
+          <p id="upload-status" class="muted" style="font-size:0.85rem;margin:0.5rem 0 0;" aria-live="polite"></p>
+          <div id="uploads-panel" style="margin-top:1rem;" aria-live="polite"></div>
+        </div>
+
+        <div>
           <div class="row" style="justify-content:space-between;">
             <span class="eyebrow">generate</span>
             <button class="btn primary" id="run-generate" style="padding:0.45rem 0.85rem;font-size:0.85rem;">Generate preview</button>
@@ -169,6 +203,8 @@ async function openProject(id) {
     });
     el('run-ingest').addEventListener('click', () => runIngest(project.id));
     el('run-generate').addEventListener('click', () => runGenerate(project.id));
+    el('upload-logo').addEventListener('change', (e) => uploadClientMedia(project.id, 'logo', e.target.files));
+    el('upload-photos').addEventListener('change', (e) => uploadClientMedia(project.id, 'photo', e.target.files));
     loadIngestion(project.id);
     loadBuilds(project.id);
   } catch (e) {
@@ -196,18 +232,49 @@ async function runIngest(projectId) {
 
 async function loadIngestion(projectId) {
   const panel = el('ingest-panel');
+  const uploadsPanel = el('uploads-panel');
   if (!panel) return false;
   try {
     const { items, assets } = await api(`/api/projects/${projectId}/source-content`);
-    if (!items.length && (!assets || !assets.length)) { panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No ingested content yet.</p>`; return false; }
-    panel.innerHTML = items.map((it) => sourceCard(it)).join('') + assetsCard(assets || []);
-    panel.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.confirm, 'confirmed')));
-    panel.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.reject, 'rejected')));
-    panel.querySelectorAll('[data-asset]').forEach((b) => b.addEventListener('click', () => reviewAsset(projectId, b.dataset.asset, b.dataset.status)));
-    return true;
+    const scraped = (assets || []).filter((a) => !a.uploaded);
+    const uploaded = (assets || []).filter((a) => a.uploaded);
+    if (!items.length && !scraped.length) {
+      panel.innerHTML = `<p class="muted" style="font-size:0.88rem;">No ingested content yet.</p>`;
+    } else {
+      panel.innerHTML = items.map((it) => sourceCard(it)).join('') + assetsCard(scraped, 'scraped images');
+      panel.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.confirm, 'confirmed')));
+      panel.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => reviewSource(projectId, b.dataset.reject, 'rejected')));
+      panel.querySelectorAll('[data-asset]').forEach((b) => b.addEventListener('click', () => reviewAsset(projectId, b.dataset.asset, b.dataset.status)));
+    }
+    if (uploadsPanel) {
+      uploadsPanel.innerHTML = uploaded.length
+        ? assetsCard(uploaded, 'uploaded media')
+        : `<p class="muted" style="font-size:0.88rem;">No client uploads yet.</p>`;
+      uploadsPanel.querySelectorAll('[data-asset]').forEach((b) => b.addEventListener('click', () => reviewAsset(projectId, b.dataset.asset, b.dataset.status)));
+    }
+    return items.length > 0 || uploaded.length > 0 || scraped.length > 0;
   } catch (e) {
     panel.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
     return false;
+  }
+}
+
+async function uploadClientMedia(projectId, kind, fileList) {
+  const status = el('upload-status');
+  const input = kind === 'logo' ? el('upload-logo') : el('upload-photos');
+  if (!fileList || !fileList.length) return;
+  const form = new FormData();
+  form.append('kind', kind);
+  for (const f of fileList) form.append('files', f);
+  if (status) status.textContent = kind === 'logo' ? 'Uploading logo…' : `Uploading ${fileList.length} photo${fileList.length > 1 ? 's' : ''}…`;
+  try {
+    const r = await api(`/api/projects/${projectId}/uploads`, { method: 'POST', body: form });
+    if (status) status.textContent = `Saved ${r.count} file${r.count === 1 ? '' : 's'}. Regenerate the preview to bake them into the site.`;
+    await loadIngestion(projectId);
+  } catch (e) {
+    if (status) status.textContent = e.message || 'Upload failed.';
+  } finally {
+    if (input) input.value = '';
   }
 }
 
@@ -281,24 +348,35 @@ async function loadBuilds(projectId) {
   }
 }
 
-// Scraped images: each must be individually approved before it can be used in a
-// build (content-ethics gate — copyright / accuracy).
-function assetsCard(assets) {
+// Scraped images need approve; client uploads arrive confirmed (operator is the gate).
+function assetsCard(assets, title = 'images') {
   if (!assets.length) return '';
   const tiles = assets.map((a) => {
-    const approved = a.review_status === 'confirmed' || a.review_status === 'edited';
-    const rejected = a.review_status === 'rejected';
-    return `<figure style="margin:0;border:1px solid ${approved ? 'var(--ok)' : 'var(--line)'};border-radius:8px;overflow:hidden;opacity:${rejected ? '0.4' : '1'};">
-      <img src="${escapeHtml(a.source_url || '')}" alt="${escapeHtml(a.alt_text || '')}" style="width:100%;height:110px;object-fit:cover;background:var(--line);" loading="lazy" />
-      <figcaption class="row" style="gap:.3rem;padding:.4rem;justify-content:center;">
-        <button class="btn ${approved ? '' : 'primary'}" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="confirmed">${approved ? '✓ Approved' : 'Approve'}</button>
-        <button class="btn ghost" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="rejected">Reject</button>
+    const status = a.reviewStatus || a.review_status || 'pending';
+    const approved = status === 'confirmed' || status === 'edited';
+    const rejected = status === 'rejected';
+    const src = a.previewUrl || a.sourceUrl || a.source_url || '';
+    const alt = a.altText || a.alt_text || '';
+    const kindLabel = a.kind === 'logo' ? 'logo' : a.uploaded ? 'upload' : 'scraped';
+    return `<figure style="margin:0;border:1px solid ${approved ? 'var(--ok, #6a9b6a)' : 'var(--line)'};border-radius:8px;overflow:hidden;opacity:${rejected ? '0.4' : '1'};background:var(--iron-2,#1a1816);">
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" style="width:100%;height:110px;object-fit:${a.kind === 'logo' ? 'contain' : 'cover'};background:#0e0c0a;padding:${a.kind === 'logo' ? '0.6rem' : '0'};" loading="lazy" />
+      <figcaption style="padding:.45rem;">
+        <div class="muted" style="font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem;">${escapeHtml(kindLabel)}</div>
+        <div class="row" style="gap:.3rem;justify-content:center;">
+          ${approved
+            ? `<span class="pill ready" style="font-size:.65rem;">Approved</span>`
+            : `<button class="btn primary" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="confirmed">Approve</button>`}
+          <button class="btn ghost" style="padding:.3rem .6rem;font-size:.75rem;" data-asset="${escapeHtml(a.id)}" data-status="rejected">${rejected ? 'Rejected' : 'Reject'}</button>
+        </div>
       </figcaption>
     </figure>`;
   }).join('');
+  const hint = title === 'scraped images'
+    ? `<p class="muted" style="font-size:.85rem;margin:0 0 .8rem;">Approve only images you have the right to use. Only approved images are built into the site.</p>`
+    : `<p class="muted" style="font-size:.85rem;margin:0 0 .8rem;">Client-provided files are auto-approved. Reject to keep one out of the next build.</p>`;
   return `<div class="card" style="padding:1.1rem;margin-bottom:0.75rem;">
-    <div class="eyebrow" style="margin:0 0 .25rem;">scraped images</div>
-    <p class="muted" style="font-size:.85rem;margin:0 0 .8rem;">Approve only images you have the right to use. Only approved images are built into the site.</p>
+    <div class="eyebrow" style="margin:0 0 .25rem;">${escapeHtml(title)}</div>
+    ${hint}
     <div style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">${tiles}</div>
   </div>`;
 }
@@ -423,8 +501,13 @@ el('create-demo').addEventListener('click', createDemo);
 // Boot: if we have a stored token, try it; otherwise show the gate.
 (async function boot() {
   if (token) {
-    try { await api('/api/projects'); show('app'); loadProjects(); return; }
-    catch { /* fall through to gate */ }
+    try {
+      await api('/api/projects');
+      setOperatorCookie(token);
+      show('app');
+      loadProjects();
+      return;
+    } catch { /* fall through to gate */ }
   }
   show('gate');
 })();

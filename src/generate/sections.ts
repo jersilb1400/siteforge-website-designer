@@ -20,10 +20,13 @@ function nav(spec: SiteSpec, currentId: string): string {
       return `<a href="${attr(s.href)}"${current ? ' aria-current="page" class="is-active"' : ''}>${esc(s.label)}</a>`;
     })
     .join('');
+  const brandInner = spec.logo
+    ? `<img class="sf-logo" src="${attr(spec.logo.src)}" alt="${attr(spec.logo.alt || spec.business.name)}" width="160" height="48" />`
+    : esc(spec.business.name);
   return `<header class="sf-header">
   <a class="sf-skip" href="#main">Skip to content</a>
   <div class="sf-nav-inner">
-    <a class="sf-brand" href="index.html">${esc(spec.business.name)}</a>
+    <a class="sf-brand${spec.logo ? ' sf-brand--logo' : ''}" href="index.html">${brandInner}</a>
     <nav class="sf-nav" aria-label="Primary">${links}</nav>
   </div>
 </header>`;

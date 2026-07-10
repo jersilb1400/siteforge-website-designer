@@ -10,6 +10,7 @@ import { interview } from './routes/interview';
 import { ingest } from './routes/ingest';
 import { generate } from './routes/generate';
 import { demos } from './routes/demos';
+import { uploads } from './routes/uploads';
 import { handleQueue } from './queue/consumer';
 import { handleMcp } from './mcp/server';
 import { requireOperator } from './middleware/auth';
@@ -39,6 +40,7 @@ api.route('/interview', interview);
 api.route('/', ingest);
 api.route('/', generate);
 api.route('/demos', demos);
+api.route('/', uploads);
 app.route('/api', api);
 
 // MCP server (Streamable HTTP, stateless JSON). Lets other Claude sessions drive

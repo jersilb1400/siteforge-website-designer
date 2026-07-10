@@ -197,3 +197,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** Single-page `#anchor` sites felt unfinished for sales demos; operators needed a way to clear old demos.
 - **Decision:** `renderSite` emits one HTML file per nav section (`index.html`, `services.html`, …) with path-based nav. Home uses teasers; inner pages get photo page-heroes. `DELETE /api/projects/:id` wipes R2 prefixes then D1 (CASCADE), and removes orphan clients.
 - **Consequences:** Preview URLs gain `/services.html` etc. Old single-page builds remain until regenerated. Industry-specific page types (Beliefs, Events) still map to the five core page templates.
+
+## ADR-0018 — Client media uploads (logo + photos)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Prospects and clients provide brand logos and real photos; demos/stock alone are not enough for a finished pitch site.
+- **Decision:** `POST /api/projects/:id/uploads` accepts multipart logo/photo uploads into R2 as auto-confirmed assets. Logos render in the nav (`spec.logo`); uploaded photos sort ahead of scraped/stock in `finalizeBuild`. Dashboard exposes Upload logo / Upload photos on the project detail view.
+- **Consequences:** Operator is the content-ethics gate for customer-supplied files (unlike scraped images, which stay pending until approved). Asset file previews use the `sf_operator` cookie so `<img>` tags work without Bearer headers.

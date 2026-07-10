@@ -121,6 +121,37 @@ Response `200`:
 
 `404 not_found` if the project doesn't exist.
 
+### POST /api/projects/:id/uploads
+Upload client-provided logo or photos (multipart form). Operator-gated. Files are
+stored in R2 and indexed as **confirmed** assets (operator is the ethics gate for
+customer-supplied media). Logos replace any prior logo for the project.
+
+Form fields:
+
+- `kind` — `logo` or `photo` (default `photo`)
+- `file` / `files` — one or more image files (JPEG, PNG, WebP, GIF; SVG for logos only)
+- `alt` — optional alt text
+
+Limits: logo ≤ 2 MB (one file); photos ≤ 8 MB each, ≤ 12 files per request.
+
+Response `201`:
+
+```json
+{
+  "count": 2,
+  "uploaded": [
+    { "id": "asset_…", "kind": "image", "mimeType": "image/jpeg", "bytes": 240112,
+      "altText": "…", "previewUrl": "/api/assets/asset_…/file", "reviewStatus": "confirmed" }
+  ]
+}
+```
+
+Regenerate the project preview to bake uploads into the site (logo → nav;
+photos preferred for hero/gallery over scraped/stock).
+
+### GET /api/assets/:id/file
+Stream an asset's bytes from R2 (dashboard thumbnails). Operator-gated.
+
 ---
 
 ## Interview (session-id gated)

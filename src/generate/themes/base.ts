@@ -29,6 +29,8 @@ h1,h2,h3{font-family:var(--font-display);line-height:1.08;margin:0;font-weight:7
 .sf-header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .sf-nav-inner{max-width:var(--maxw);margin:0 auto;padding:.9rem 1.25rem;display:flex;align-items:center;justify-content:${layout.nav === 'center' ? 'center' : 'space-between'};gap:1.5rem;flex-wrap:wrap}
 .sf-brand{font-family:var(--font-display);font-weight:700;font-size:1.25rem;text-decoration:none;color:var(--ink);letter-spacing:-.01em}
+.sf-brand--logo{display:inline-flex;align-items:center;line-height:0}
+.sf-logo{display:block;height:clamp(1.75rem,3.5vw,2.4rem);width:auto;max-width:min(200px,42vw);object-fit:contain}
 .sf-nav{display:flex;gap:1.25rem;flex-wrap:wrap}
 .sf-nav a{text-decoration:none;color:var(--ink);font-size:.95rem;opacity:.85}
 .sf-nav a:hover{opacity:1;color:var(--link)}

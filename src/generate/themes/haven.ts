@@ -40,6 +40,8 @@ export const haven: Theme = {
          box-shadow:0 18px 40px -22px rgba(0,0,0,.5)}
        .sf-brand{font-family:var(--font-display);font-weight:600;font-size:1.4rem;letter-spacing:.01em;
          font-style:italic;color:var(--haven-ink)}
+       .sf-brand--logo{font-style:normal}
+       .sf-brand--logo .sf-logo{filter:drop-shadow(0 1px 8px rgba(0,0,0,.35));max-height:2.2rem}
        .sf-nav a{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;
          color:color-mix(in srgb,var(--haven-ink) 78%,transparent);opacity:1;transition:color .25s ease}
        .sf-nav a:hover{color:var(--haven-gold)}

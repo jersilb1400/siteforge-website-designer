@@ -100,12 +100,30 @@ ingest.get('/projects/:id/source-content', async (c) => {
     source_url: string | null;
     alt_text: string | null;
     review_status: string;
+    kind: string;
+    mime_type: string | null;
+    bytes: number | null;
   }>(
     c.env,
-    'SELECT id, r2_key, source_url, alt_text, review_status FROM assets WHERE project_id = ? ORDER BY created_at DESC LIMIT 60',
+    `SELECT id, r2_key, source_url, alt_text, review_status, kind, mime_type, bytes
+       FROM assets WHERE project_id = ? ORDER BY created_at DESC LIMIT 60`,
     projectId,
   );
-  return c.json({ items, assets });
+  return c.json({
+    items,
+    assets: assets.map((a) => ({
+      id: a.id,
+      kind: a.kind,
+      r2Key: a.r2_key,
+      sourceUrl: a.source_url,
+      altText: a.alt_text,
+      reviewStatus: a.review_status,
+      mimeType: a.mime_type,
+      bytes: a.bytes,
+      previewUrl: `/api/assets/${a.id}/file`,
+      uploaded: a.r2_key.includes('/uploads/') || a.r2_key.includes('/logo/') || a.kind === 'logo',
+    })),
+  });
 });
 
 // PATCH /api/assets/:id — approve/reject a scraped image. Content-ethics gate:
