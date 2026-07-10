@@ -57,8 +57,11 @@ binding = "AI"
 [browser]
 binding = "BROWSER"
 
+# Deployed Workers report "production" (this hides the dev-only /__fixtures/*
+# routes and labels /api/health correctly). Local `wrangler dev` overrides this
+# to "development" via .dev.vars, which takes precedence over [vars].
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 # Non-secret model routing defaults; override per-environment as needed.
 ANTHROPIC_MODEL_SMART = "claude-sonnet-5"
 ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001"
