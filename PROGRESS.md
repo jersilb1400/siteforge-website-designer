@@ -2,10 +2,13 @@
 
 Living progress log for the SiteForge autonomous build loop (see `LOOP.md`).
 Single operator: **Jeremy**. Stack: Cloudflare Workers + Hono + TypeScript, with
-D1 / R2 / KV / Queues / Browser Rendering / Workers AI + the Anthropic API.
+D1 / R2 / KV / Queues / Browser Rendering / Workers AI + Anthropic + OpenRouter.
 
 **Update this file every iteration.** It is the single source of truth for what is
 done, what is *verified*, and what is next.
+
+**Production:** `https://websiteforge.cc` · Worker `https://siteforge.jersilb.workers.dev`
+Branch: `claude/build-plan-review-implement-h0z0k9`
 
 ---
 
@@ -13,223 +16,114 @@ done, what is *verified*, and what is next.
 
 | Phase | Title | State |
 |---|---|---|
-| 0 | Foundation | **Implemented & locally verified.** `tsc` clean, `wrangler deploy --dry-run` bundles all bindings, `wrangler dev` serves `/api/health` + `/api/ready` (D1+KV live). Real production `wrangler deploy` pending Jeremy's Cloudflare credentials + provisioned binding IDs. |
-| 1 | Interview Engine | **Implemented & verified end-to-end** against local D1 via `wrangler dev` (create project → 20-question adaptive interview → structured JSON profile; status advanced to `ingesting`; resume is idempotent). Only AI *enrichment* (industry page suggestions, thin-answer follow-ups) is unverified, pending a live `ANTHROPIC_API_KEY`. |
-| 2 | Ingestion Pipeline | **Implemented & locally verified.** URL → queue → HTMLRewriter extract → R2 images → normalized `source_content` → confirm/reject gate, verified end-to-end in `wrangler dev`. Browser Rendering path is a documented stub (paid plan); fetch fallback ships. |
-| 3 | Generation Engine | **Core implemented & locally verified.** Interview + confirmed content → theme select → **composition recipe** → palette → copy (Claude + deterministic fallback) → role-assigned photos (OpenRouter slots) → self-contained multi-page HTML in R2 → design critique fix pass → versioned build → preview. **2026-07-10 quality upgrade:** 6 recipes, conversion copy, art-directed imagery, critique loop (ADR-0020). |
-| 4 | Revision & Production Deploy | **Implemented & locally verified.** NL revision loop, versioned builds, publish/rollback, `/site/:projectId/` production surface, quality gate. Real Lighthouse on a published site: Perf 100 / A11y 94 / BP 96 / SEO 100. |
-| 5 | Polish & Extend | **MCP server shipped** (`POST /mcp`, verified). Custom domains, multi-tenant auth, billing documented + escalation-gated (paid). |
+| 0 | Foundation | **Production verified.** Live Worker + D1/KV/R2/Queues/ASSETS; `/api/health` + `/api/ready` OK. |
+| 1 | Interview Engine | **Production verified.** Adaptive interview, resume, operator auth, Anthropic enrichment. |
+| 2 | Ingestion Pipeline | **Implemented & verified.** Fetch + HTMLRewriter → R2 → review gate. Browser Rendering still stub (paid). |
+| 3 | Generation Engine | **Production verified + quality upgrade (2026-07-10).** 8 themes, 6 composition recipes, multi-page sites, OpenRouter FLUX photos, uploads, design director, critique loop, sales demos. ADR-0020. |
+| 4 | Revision & Production Deploy | **Production verified.** NL revise, versioned builds, publish/rollback, `/preview/` + `/site/`. Quality gate + Lighthouse 90+. |
+| 5 | Polish & Extend | **MCP shipped.** Custom domains / multi-tenant / billing still escalation-gated. Operator chrome (forge UI + photography) live. |
 
-Legend: "Implemented" = code written and `tsc --noEmit` clean. "Verified" = actually
-run against real bindings, acceptance check passed, reviewer returned GO. Per the
-phase-gating rule, Phase 2 does not start until Phase 0 + 1 are **verified** (which
-requires Jeremy's Cloudflare account — see escalation below).
+Legend: "Implemented" = code written and `tsc --noEmit` clean. "Verified" = run against
+real bindings with acceptance checks. "Production verified" = exercised on the live Worker.
+
+### Latest quality proof (2026-07-10)
+
+Five industry demos regenerated after ADR-0020 — all **quality score 100**, OpenRouter
+photos (~$0.084 each), distinct compositions:
+
+| Demo | Theme / recipe signal | Preview |
+|---|---|---|
+| Lumen Spa | Haven · editorial-luxury · FAQ | `/preview/build_mrf2uhbiurl3en1gi8na/` |
+| Harbor Community Church | Sanctuary · visit + give pages | `/preview/build_mrf2vdo43eetpj7oxwsi/` |
+| Ember & Oak | Storefront · reserve CTA | `/preview/build_mrf2w5db69x95gbtn737/` |
+| TrueLine Builders | Forge · craft-trade · FAQ | `/preview/build_mrf2wyfsc129ahuu2ao2/` |
+| Northfield Advisory | Atelier · team + FAQ | `/preview/build_mrf2xnopuk5bzbwjhots/` |
+
+Smoke: brand-first heroes with photos, no “Learn more”, industry CTAs, testimonials,
+sticky mobile CTA. Unit tests: **71 green**; `tsc` clean.
 
 ### Acceptance / user-simulation testing (2026-07-08)
 
-A full simulation battery was run against `wrangler dev` (happy paths + adversarial
-+ security + MCP edge cases): **20/20 checks pass.** Highlights:
-- **Security:** an XSS payload (`</script><script>alert(1)</script>` + `<img onerror>`)
-  submitted as interview content is fully HTML-escaped in the generated preview — no
-  live `<script>` or `<img onerror>` reaches the page.
-- **Validation/auth:** empty required answer → 400; bogus session → 404; operator route
-  with no/wrong token → 401; unknown `themeId` → 400; generate-before-interview → 400.
-- **MCP:** initialize/tools.list (5 tools) OK; unknown tool, missing args, generate
-  before interview, and bogus project all return graceful `isError` (no crash); no-auth
-  → 401; malformed JSON-RPC → 400.
-- **Quality:** real Lighthouse on a published site — Perf 100 / A11y 94 / BP 96 / SEO 100.
+Full simulation against `wrangler dev` (happy paths + adversarial + security + MCP):
+**20/20 checks pass.** XSS escaped in previews; auth/validation fail closed; MCP tools
+graceful on errors. Real Lighthouse on a published site: Perf 100 / A11y 94 / BP 96 / SEO 100.
 
 ---
 
-## Phase 0 — Foundation  ✅ implemented (verification pending Cloudflare creds)
+## Phase 0 — Foundation  ✅ production verified
 
-Deliverable (brief): `wrangler deploy` works with a hello-world API.
+- Workers + Hono, typed `Env`, D1 migrations, health/ready, queue wiring, static ASSETS.
+- Bindings provisioned; secrets set (`ANTHROPIC_API_KEY`, `OPERATOR_TOKEN`,
+  `OPENROUTER_API_KEY`); production deploy routine.
 
-Built this session:
-- Workers + Hono app scaffold: `src/index.ts` mounts `/api/*`, falls through to static
-  assets (`ASSETS` binding) for the dashboard/preview, JSON error handler, per-request
-  id middleware, `hono/logger` + `secure-headers`.
-- Binding surface declared in `wrangler.toml` and mirrored authoritatively in
-  `src/types.ts` `Env`: `DB` (D1), `KV`, `R2`, `INGEST_QUEUE` (+ consumer/DLQ),
-  optional `AI` (Workers AI) and `BROWSER` (Browser Rendering), `ASSETS`.
-- D1 schema `migrations/0001_init.sql`: `clients`, `projects`, `interview_sessions`,
-  `interview_answers`, `source_content`, `assets`, `builds`, `job_log` (with indexes
-  and the client-review gate `source_content.review_status`).
-- Health/readiness endpoints: `GET /api/health` (liveness) and `GET /api/ready`
-  (touches D1 + KV and reports `ANTHROPIC_API_KEY` presence).
-- Deploy scripting via npm scripts (`dev`, `deploy`, `db:local`, `db:remote`,
-  `typecheck`, `test`, `cf-typegen`); secrets templated in `.dev.vars.example`.
-- Queue wiring: producer/consumer configured; `src/queue/consumer.ts` records jobs to
-  `job_log` and ack/retries so producer→queue→consumer→D1 is verifiable in Phase 2.
+## Phase 1 — Interview Engine  ✅ production verified
 
-Verification done: `tsc --noEmit` clean this session.
-Verification **pending** (blocked on Jeremy): real `wrangler deploy` and a live hit of
-`/api/health` + `/api/ready` against deployed bindings — needs a Cloudflare login and
-real D1/KV/R2/Queue IDs replacing the `PLACEHOLDER_*` values in `wrangler.toml`.
+- Adaptive engine + question bank; D1 sessions/answers; operator token auth.
+- Client UI: `public/interview.html` (forge chrome).
 
-## Phase 1 — Interview Engine  ✅ implemented (end-to-end run pending)
+## Phase 2 — Ingestion Pipeline  ✅ verified (Browser Rendering stub)
 
-Deliverable (brief): complete an interview end-to-end and see structured JSON output.
+- Queue consumer → HTMLRewriter extract → R2 assets → `source_content` review gate.
+- Facebook/Google best-effort tiers; confirm/reject UI.
+- Browser Rendering path remains a documented stub (`USE_BROWSER_RENDERING=false`).
 
-Built this session:
-- Adaptive interview engine: `src/interview/engine.ts` + `src/interview/questions.ts`
-  (smart follow-ups driven by prior answers, not a flat form).
-- API routes: `src/routes/interview.ts` (mounted at `/api/interview`) and
-  `src/routes/projects.ts` (`/api/projects`, operator-gated).
-- Persistence in D1: `interview_sessions` (resumable via `phase` + `next_question_id`)
-  and `interview_answers` (JSON `value_json`, upsert on `(session_id, question_id)`,
-  `source` = user | ai).
-- Operator auth middleware `src/middleware/auth.ts`: `OPERATOR_TOKEN` via Bearer header
-  or `sf_operator` cookie, constant-time compare, **fails closed** when unset.
-- Anthropic client `src/lib/anthropic.ts` with SMART/CHEAP model routing from
-  `src/lib/config.ts`.
-- Minimal web UI intended under `public/` (served via `ASSETS`).
+## Phase 3 — Generation Engine  ✅ production verified
 
-Verification done: `tsc --noEmit` clean this session.
-Verification **pending**: run `npm run db:local`, `npm run dev`, create a project, walk
-an interview to completion, and confirm structured JSON output. Needs a live
-`ANTHROPIC_API_KEY` in `.dev.vars` for the adaptive follow-up calls.
+Deliverable: interview + ingestion → live multi-page preview. **Met.**
 
----
+- [x] **8 themes:** atelier, sanctuary, storefront, ledger, meridian, forge, gallery, haven
+- [x] **Composition recipes** (`src/generate/composition/`): editorial-luxury,
+      warm-hospitality, reverent-sanctuary, clean-clinic, craft-trade, mission-ledger
+- [x] Design director: curated fonts (no Inter body), signatures, palette, recipe pick
+- [x] Multi-page render: home + about/services/gallery/contact + optional team/faq/give/visit
+- [x] Conversion copy: industry voice, goal CTAs, testimonials/FAQ/team (demo-invented only)
+- [x] Art-directed imagery: `SiteImage.role`; OpenRouter FLUX.2 Klein 4B slot fill;
+      uploads → scrapes → AI → Unsplash fallback (ADR-0019)
+- [x] Client uploads: logo + photos (`POST /api/projects/:id/uploads`) (ADR-0018)
+- [x] Sales demos: `POST /api/demos` seeds project + generate in one click
+- [x] Design critique loop + one fix pass (`critique.ts`); non-blocking design checks
+- [x] Bundle in R2; `builds.spec_json` for rebuild; preview at `/preview/:buildId/`
 
-## Phase 2 — Ingestion Pipeline  ✅ implemented & locally verified
+## Phase 4 — Revision & Production Deploy  ✅ production verified
 
-Deliverable: paste a URL → get reviewed, structured content in `source_content`. **Met.**
-- [x] Scrape worker driven by `INGEST_QUEUE`; `src/queue/consumer.ts` dispatches by
-      `IngestJob.kind` with ack/retry → DLQ.
-- [x] Website extractor (`src/ingest/extract.ts`) via Workers HTMLRewriter: business
-      name, meta/OG, headings, contact details (`contact.ts`), socials, candidate color
-      palette ranked brand-over-neutral (`color.ts`).
-- [x] Image pipeline (`src/ingest/assets.ts`): download to R2 under project-scoped keys
-      (`projects/<id>/scraped/<assetId>.<ext>`), size/count/mime guards, indexed in `assets`.
-- [x] Renderer with graceful degradation (`src/ingest/render.ts`): fetch path (default,
-      deployable) + Browser Rendering upgrade seam gated by `USE_BROWSER_RENDERING`;
-      robots.txt honored for non-client properties (client's own site bypasses).
-- [x] Facebook tiered ingestion (`pipeline.ts`): (a) Graph API [later — ESCALATE: app
-      review], (b) best-effort public scrape marked low-confidence, (c) manual fallback.
-      Verified: an un-scrapable page degrades to the `manual` tier, never oversold.
-- [x] Google Business: best-effort public listing else manual fallback.
-- [x] Review API + operator UI: `PATCH /api/source-content/:id` gate; dashboard shows
-      each source with confidence + Confirm/Reject. Nothing is used until
-      `review_status` is `confirmed`/`edited`.
-- [x] **Verified end-to-end** in `wrangler dev`: ingest a fixture URL → queue → extract →
-      3 images stored in R2 → normalized `source_content` (name/email/phone/address/
-      socials/palette) → confirm/edit gate. 9 ingest unit tests green (18 total).
+- NL revision loop; versioned builds; publish/rollback; `/site/:projectId/`
+- In-worker quality gate + Lighthouse CI script; publish blocked unless pass (or `force`)
 
-**Browser Rendering caveat:** the real Browser Rendering path (`renderWithBrowser`) is a
-documented stub — it needs the paid Workers plan + `@cloudflare/puppeteer`, which can't be
-exercised in this environment. The fetch fallback covers server-rendered sites; JS-heavy
-sites need the seam implemented + `USE_BROWSER_RENDERING=true`.
+## Phase 5 — Polish & Extend  ◐ partial
 
-## Phase 3 — Generation Engine  ✅ core implemented & locally verified
-
-Deliverable: interview + ingestion → live preview site. **Met (preview served from R2).**
-- [x] Theme system (`src/generate/themes/`): shared semantic HTML sections + inline CSS
-      (no CDN, Lighthouse-friendly), driven by palette tokens + layout switches. Three
-      distinct themes to frontend-design standards — Atelier (editorial/pro), Sanctuary
-      (warm/church/nonprofit), Storefront (bold/restaurant/retail) — with auto-selection
-      by industry+tone. (6–10 themes: 3 shipped, framework scales to more.)
-- [x] Palette resolver (`palette.ts`): explicit hex > scraped brand color > tone default,
-      WCAG-readable ink; content copy (`content.ts`): Claude with a deterministic fallback
-      so **no lorem ipsum ever reaches a preview** even without an API key.
-- [x] Bundle assembly (`bundle.ts`): self-contained HTML + copied confirmed images to R2
-      under `builds/<id>/`; snapshot in `builds.spec_json`; versioned `builds` row.
-- [x] Content-ethics gate enforced: only `source_content` rows with review_status
-      `confirmed`/`edited` feed generation; images only when a source is confirmed.
-- [x] Preview served from R2 at `/preview/:buildId/`; operator dashboard has Generate +
-      versioned build list with preview links.
-- [x] **Verified end-to-end** in `wrangler dev`: interview → ingest → confirm → generate →
-      preview renders real copy, SEO/JSON-LD, images served from R2. 8 generate unit tests
-      (26 total).
-- [x] **Adversarial reviewer pass (NO-GO → fixed → GO):** closed a stored-XSS via
-      unescaped JSON-LD (`jsonLdSafe`), a content-ethics gap where confirming one text
-      source published all scraped images (added per-asset `review_status` +
-      `PATCH /api/assets/:id` + approval UI; migration `0002`), a build version race
-      (reserve row `building` → write R2 → flip `ready`), and WCAG contrast (brand/accent
-      adjusted to AA as text via `adjustForContrast`). Added href-scheme allowlist,
-      empty-meta fallback, and 400 on unknown `themeId`. 30 unit tests; re-verified e2e.
-- [ ] Deferred to Phase 4: preview on its own `preview-{id}` subdomain + real deploy
-      (needs Cloudflare creds); multi-page output; automated Lighthouse gate.
-
-## Phase 4 — Revision & Production Deploy  ✅ implemented & locally verified
-
-Deliverable: NL revision loop + versioned production surface with quality gates. **Met.**
-- [x] Natural-language revision loop (`src/generate/revise.ts`): deterministic parser
-      (darker/lighter, hex/named colors, theme switch, headline/tagline edits) + Claude
-      fallback; each revision is a fresh versioned build. Verified: "darker + bold" →
-      storefront + darkened brand; "change the headline to ..." → new copy in preview.
-- [x] Versioning + one-click rollback (`POST /api/projects/:id/rollback`) — verified
-      `/site/` reverts to the rolled-back version.
-- [x] Production surface: published build served from R2 at `/site/:projectId/`
-      (`POST /api/builds/:id/publish`, republish=rollback). Real per-client subdomain via
-      `wrangler deploy` is a Phase-5/escalation step (needs Cloudflare creds); the R2
-      bundle is deploy-portable.
-- [x] Quality gate: in-worker check (`src/generate/quality.ts`, stored in
-      `builds.lighthouse_json`) blocks publishing a failing build unless `force`. Plus a
-      **real Lighthouse** CI gate (`scripts/lighthouse-gate.mjs`).
-- [x] **Verified:** real Lighthouse on a published site scored **Performance 100,
-      Accessibility 94, Best-Practices 96, SEO 100** (all ≥90). 38 unit tests.
-
-## Phase 5 — Polish & Extend  ◐ MCP shipped; rest documented/escalation-gated
-
-- [x] **MCP server exposure** (`src/mcp/server.ts`, `POST /mcp`): stateless Streamable-HTTP
-      JSON-RPC, operator-gated, tools `siteforge_{list_projects,create_project,get_project,
-      generate_site,list_builds}`. Verified via initialize/tools.list/tools.call (created a
-      project + generated a site through MCP).
-- [ ] Custom domains via Cloudflare for SaaS — **ESCALATE** (paid zone/domain setup).
-- [ ] Multi-tenant auth (replace `OPERATOR_TOKEN`; Cloudflare Access or magic-link) —
-      designed but not built; single-operator model stands for v1.
-- [ ] Billing hooks — **ESCALATE**, only if productized.
+- [x] MCP server (`POST /mcp`) — operator-gated tools
+- [x] SiteForge operator chrome: blacksmith forge UI + photography (`public/`)
+- [ ] Custom domains (Cloudflare for SaaS) — **ESCALATE**
+- [ ] Multi-tenant auth — v1 stays single-operator token
+- [ ] Billing — **ESCALATE** if productized
 
 ---
 
 ## Known gaps / next actions
 
-These are the things blocking verification. Several require **Jeremy** (see `LOOP.md`
-escalation triggers):
-
-1. **Provision real Cloudflare binding IDs** [Jeremy]: create D1 `siteforge-db`, the KV
-   namespace, R2 `siteforge-assets`, and Queues `siteforge-ingest` (+ DLQ) under
-   Jeremy's account, then replace `PLACEHOLDER_D1_DATABASE_ID` /
-   `PLACEHOLDER_KV_NAMESPACE_ID` in `wrangler.toml`.
-2. **Set secrets** [Jeremy]: `wrangler secret put ANTHROPIC_API_KEY` and
-   `wrangler secret put OPERATOR_TOKEN` (long random string). Locally, copy
-   `.dev.vars.example` → `.dev.vars` (gitignored) with real values.
-3. **First real deploy** [Jeremy-gated]: `npm run db:remote` then `npm run deploy`;
-   hit `/api/health` and `/api/ready` to verify Phase 0 for real.
-4. **Verify Phase 1 end-to-end** locally: `npm run db:local`, `npm run dev`, walk an
-   interview to structured-JSON completion (needs the key from #2).
-5. **Wire Browser Rendering** [Phase 2 start]: the `BROWSER` binding is declared but
-   unused; requires the Workers Paid plan [ESCALATE for plan spend]. Also confirm
-   Queues availability on the plan.
-6. **Cost watch**: keep infra under $10/mo hobby ceiling; Browser Rendering, Queues,
-   and production Workers may cross the ~$5/mo Cloudflare line — escalate before enabling.
+1. **Browser Rendering** — implement real puppeteer path when paid plan spend is OK.
+2. **Custom domains** — Cloudflare for SaaS for client production hostnames.
+3. **Multi-tenant auth** — replace operator token when productizing beyond Jeremy.
+4. **Cost watch** — OpenRouter ~$0.08–0.12 per 6-image demo; Anthropic usage on generate/
+   critique; keep infra under hobby ceiling or escalate.
+5. **Industry page depth** — more recipe variants / section recipes as prospect feedback lands.
+6. **Real client path smoke** — full interview → ingest → generate (non-demo) to confirm
+   invented testimonials stay off when `demo` is false.
 
 ---
 
 ## Session log
 
 ### 2026-07-08 — Foundation + Interview + loop setup
-- Phase 0 scaffolded and typecheck-clean: Hono app, `Env`/bindings, `0001_init.sql`
-  schema, health/ready endpoints, queue wiring, deploy scripts.
-- Phase 1 implemented and typecheck-clean: adaptive interview engine + API routes +
-  D1 persistence + operator auth + Anthropic model routing.
-- Configured the autonomous build loop: `LOOP.md`, this `PROGRESS.md`, the `reviewer`
-  adversarial subagent (`.claude/agents/reviewer.md`), `.claude/settings.json`
-  permissions, and `.claude/agents/README.md` (role + model-routing guide).
-- **Not yet verified against live Cloudflare**: real `wrangler deploy` and end-to-end
-  interview run are blocked on Jeremy's credentials/secrets (see Known gaps 1–4).
-- **Next iteration**: once #1–#4 clear, verify Phases 0 + 1 for real; only then begin
-  Phase 2 (Ingestion) per the phase-gating rule.
+- Phase 0–1 scaffolded; autonomous loop (`LOOP.md`, reviewer agent) configured.
 
-### 2026-07-10 — Next-level site quality (ADR-0020)
-- Composition recipe library (`src/generate/composition/`): 6 industry-native recipes
-  driving hero mode, home teaser order, extra pages, image slots.
-- Art-directed imagery: `SiteImage.role` + slot-based OpenRouter prompts; sections use
-  `imgByRole` / `imgsByRole`.
-- Conversion copy: industry voice packs, goal-driven CTAs, testimonials/FAQ/team
-  (demo-invented only when `demo` + recipe allows).
-- Design critique loop (`critique.ts`) + one fix pass in `finalizeBuild`; non-blocking
-  design checks in `quality.ts`. Font pairings no longer use Inter as body.
-- Shared theme CSS for testimonials, FAQ, team, sticky CTA, full-bleed recipe heroes.
-- Unit tests: 71 green; `tsc` clean.
+### 2026-07-09 — Production + demos + media
+- Live deploy to Cloudflare; custom domain `websiteforge.cc`.
+- Sales demos, multi-page sites, project delete, client uploads, OpenRouter imagery
+  (ADR-0017–0019). Haven editorial-luxury demo bar.
+
+### 2026-07-10 — Operator chrome + next-level site quality
+- Forge photography on SiteForge chrome (gate, workshop ghost strike, how-to, interview).
+- **ADR-0020:** composition recipes, role-assigned images, conversion copy, critique loop,
+  theme CSS for new sections. Deployed; 5-industry demo battery quality 100.
+- Unit tests 71 green.
