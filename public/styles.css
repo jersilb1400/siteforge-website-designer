@@ -196,7 +196,7 @@ input[type=text], input[type=email], input[type=url], input[type=password], text
   padding: 0.7rem 0.85rem;
 }
 textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
-input:focus, textarea:focus, select:focus, .btn:focus-visible, a:focus-visible, .opt:focus-within {
+input:focus, textarea:focus, select:focus, .btn:focus-visible, a:focus-visible, .opt:focus-visible {
   outline: 2px solid var(--ember);
   outline-offset: 2px;
   border-color: var(--ember);
@@ -213,11 +213,13 @@ input:focus, textarea:focus, select:focus, .btn:focus-visible, a:focus-visible, 
   border-radius: 999px;
   cursor: pointer;
   background: var(--surface);
+  font-family: inherit;
   font-size: 0.95rem;
+  color: var(--ink);
+  text-align: left;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 .opt:hover { border-color: var(--ink); }
-.opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .opt.checked { border-color: var(--ember); background: var(--ember-tint); color: var(--ember-deep); }
 
 /* --- the forge progress rail (signature element) --- */

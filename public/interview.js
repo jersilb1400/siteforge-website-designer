@@ -54,19 +54,24 @@ function buildControl(q) {
   if (q.type === 'boolean') {
     const wrap = document.createElement('div');
     wrap.className = 'opts';
+    wrap.setAttribute('role', 'radiogroup');
     let choice = null;
     for (const [label, v] of [['Yes', true], ['No', false]]) {
-      const b = document.createElement('label');
+      // A real <button> fires exactly one click event. (An earlier version used
+      // <label><input>, where the label forwarded the click to the input and the
+      // handler fired twice — silently un-toggling multi-selects.)
+      const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'opt';
-      b.tabIndex = 0;
-      b.innerHTML = `<input type="radio" name="answer" /> ${label}`;
-      const pick = () => {
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.textContent = label;
+      b.addEventListener('click', () => {
         choice = v;
-        wrap.querySelectorAll('.opt').forEach((o) => o.classList.remove('checked'));
+        wrap.querySelectorAll('.opt').forEach((o) => { o.classList.remove('checked'); o.setAttribute('aria-checked', 'false'); });
         b.classList.add('checked');
-      };
-      b.addEventListener('click', pick);
-      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+        b.setAttribute('aria-checked', 'true');
+      });
       wrap.appendChild(b);
     }
     return { node: wrap, read: () => choice };
@@ -75,24 +80,25 @@ function buildControl(q) {
     const multi = q.type === 'multi_select';
     const wrap = document.createElement('div');
     wrap.className = 'opts';
+    wrap.setAttribute('role', multi ? 'group' : 'radiogroup');
     const chosen = new Set(multi && Array.isArray(val) ? val : []);
     (q.options || []).forEach((opt) => {
-      const b = document.createElement('label');
+      const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'opt' + (chosen.has(opt) ? ' checked' : '');
-      b.tabIndex = 0;
-      b.innerHTML = `<input type="${multi ? 'checkbox' : 'radio'}" name="answer" /> ${opt}`;
-      const pick = () => {
+      b.setAttribute('role', multi ? 'checkbox' : 'radio');
+      b.setAttribute('aria-checked', chosen.has(opt) ? 'true' : 'false');
+      b.textContent = opt;
+      b.addEventListener('click', () => {
         if (multi) {
-          if (chosen.has(opt)) { chosen.delete(opt); b.classList.remove('checked'); }
-          else { chosen.add(opt); b.classList.add('checked'); }
+          if (chosen.has(opt)) { chosen.delete(opt); b.classList.remove('checked'); b.setAttribute('aria-checked', 'false'); }
+          else { chosen.add(opt); b.classList.add('checked'); b.setAttribute('aria-checked', 'true'); }
         } else {
           chosen.clear(); chosen.add(opt);
-          wrap.querySelectorAll('.opt').forEach((o) => o.classList.remove('checked'));
-          b.classList.add('checked');
+          wrap.querySelectorAll('.opt').forEach((o) => { o.classList.remove('checked'); o.setAttribute('aria-checked', 'false'); });
+          b.classList.add('checked'); b.setAttribute('aria-checked', 'true');
         }
-      };
-      b.addEventListener('click', pick);
-      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      });
       wrap.appendChild(b);
     });
     return { node: wrap, read: () => (multi ? [...chosen] : ([...chosen][0] ?? '')) };
