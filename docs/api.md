@@ -195,3 +195,57 @@ before completion) so the review UI can show progress.
 `pages` falls back to the industry default set when the client hasn't chosen any;
 `brand.generatePalette` is inferred true when colors are blank or the client asked
 for a generated palette.
+
+---
+
+## Sales demos (operator only)
+
+One-click sample sites for pitching prospects. Creates a real project seeded with
+synthetic interview answers + confirmed catalog content, then runs the normal
+generate pipeline. No live interview required.
+
+### GET /api/demos/industries
+List industries the demo catalog supports (with default theme id/name).
+
+```json
+{ "industries": [ { "industry": "Day spa / Salon", "themeId": "haven", "themeName": "Haven" }, … ] }
+```
+
+### POST /api/demos
+Build a demo site from a short brief.
+
+Request body:
+
+```json
+{
+  "businessName": "Aura Day Spa",
+  "industry": "Day spa / Salon",
+  "tagline": "optional",
+  "blurb": "optional short about",
+  "phone": "optional",
+  "email": "optional",
+  "city": "optional",
+  "logoUrl": "optional https URL",
+  "themeId": "optional override"
+}
+```
+
+- `businessName` and `industry` are required (`400` if missing/unknown).
+- Optional `logoUrl` is fetched, stored in R2, and auto-confirmed as a logo asset.
+- Project is named `Demo — {businessName}` and appears in the normal project list.
+
+Response `201`:
+
+```json
+{
+  "projectId": "proj_…",
+  "clientId": "client_…",
+  "buildId": "build_…",
+  "version": 1,
+  "themeId": "haven",
+  "previewUrl": "/preview/build_…/",
+  "siteUrl": "/site/proj_…/",
+  "quality": { "score": 100, "pass": true },
+  "demo": true
+}
+```

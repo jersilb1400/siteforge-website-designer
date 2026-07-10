@@ -72,10 +72,15 @@ const PAGE_TO_SECTION: Record<string, SectionSpec> = {
   Programs: { id: 'services', label: 'Programs' },
   Shop: { id: 'services', label: 'Shop' },
   Work: { id: 'services', label: 'Work' },
+  Book: { id: 'contact', label: 'Book' },
+  Testimonials: { id: 'about', label: 'Testimonials' },
+  Reviews: { id: 'about', label: 'Reviews' },
   Gallery: { id: 'gallery', label: 'Gallery' },
   Contact: { id: 'contact', label: 'Contact' },
   'Location & Hours': { id: 'contact', label: 'Visit' },
   Visit: { id: 'contact', label: 'Visit' },
+  'Get a Quote': { id: 'contact', label: 'Get a Quote' },
+  'Service Area': { id: 'about', label: 'Service Area' },
 };
 
 export function sectionsForPages(pages: string[]): SectionSpec[] {

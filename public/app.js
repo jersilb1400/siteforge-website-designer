@@ -55,20 +55,24 @@ function pill(status) {
   return `<span class="pill ${s}">${s}</span>`;
 }
 
+function isDemoProject(p) {
+  return String(p.name || '').startsWith('Demo —');
+}
+
 async function loadProjects() {
   const list = el('list');
   list.innerHTML = '<div class="card center"><span class="spinner"></span></div>';
   try {
     const { projects } = await api('/api/projects');
     if (!projects.length) {
-      list.innerHTML = `<div class="card center muted">No projects yet. Start one to generate an interview link.</div>`;
+      list.innerHTML = `<div class="card center muted">No projects yet. Start one to generate an interview link, or create a sales demo.</div>`;
       return;
     }
     list.innerHTML = projects.map((p) => `
       <div class="spec rise" data-id="${escapeHtml(p.id)}">
         <div>
-          <div class="title">${escapeHtml(p.name)}</div>
-          <div class="muted" style="font-size:0.9rem;">${escapeHtml(p.client_name)}</div>
+          <div class="title">${escapeHtml(p.name)}${isDemoProject(p) ? ' <span class="pill ready">Demo</span>' : ''}</div>
+          <div class="muted" style="font-size:0.9rem;">${escapeHtml(p.client_name)}${p.industry ? ` · ${escapeHtml(p.industry)}` : ''}</div>
           <div class="id">${escapeHtml(p.id)}</div>
         </div>
         <div class="row" style="justify-content:flex-end;">
@@ -97,9 +101,9 @@ async function openProject(id) {
       <div class="card stack rise">
         <div class="row" style="justify-content:space-between;">
           <div>
-            <div class="eyebrow">project</div>
-            <h2 style="margin-top:0.5rem;">${escapeHtml(project.name)}</h2>
-            <div class="id muted">${escapeHtml(project.id)}</div>
+            <div class="eyebrow">${isDemoProject(project) ? 'sales demo' : 'project'}</div>
+            <h2 style="margin-top:0.5rem;">${escapeHtml(project.name)}${isDemoProject(project) ? ' <span class="pill ready">Demo</span>' : ''}</h2>
+            <div class="id muted">${escapeHtml(project.id)}${project.industry ? ` · ${escapeHtml(project.industry)}` : ''}</div>
           </div>
           ${pill(project.status)}
         </div>
@@ -325,13 +329,79 @@ async function createProject() {
   }
 }
 
+let demoIndustriesLoaded = false;
+
+async function ensureDemoIndustries() {
+  if (demoIndustriesLoaded) return;
+  const select = el('demoIndustry');
+  const { industries } = await api('/api/demos/industries');
+  select.innerHTML = industries.map((i) =>
+    `<option value="${escapeHtml(i.industry)}">${escapeHtml(i.industry)} — ${escapeHtml(i.themeName)}</option>`
+  ).join('');
+  // Prefer spa/salon when present (primary sales use case).
+  const spa = industries.find((i) => i.industry === 'Day spa / Salon');
+  if (spa) select.value = spa.industry;
+  demoIndustriesLoaded = true;
+}
+
+function showDemoForm() {
+  el('new-form').classList.add('hidden');
+  el('demo-form').classList.toggle('hidden');
+  if (!el('demo-form').classList.contains('hidden')) {
+    ensureDemoIndustries().catch((e) => { el('demo-err').textContent = e.message; });
+  }
+}
+
+async function createDemo() {
+  const businessName = el('demoName').value.trim();
+  const industry = el('demoIndustry').value;
+  el('demo-err').textContent = '';
+  if (!businessName) { el('demo-err').textContent = 'Business name is required.'; return; }
+  if (!industry) { el('demo-err').textContent = 'Pick an industry.'; return; }
+  const btn = el('create-demo');
+  btn.disabled = true; btn.textContent = 'Forging demo…';
+  try {
+    const body = {
+      businessName,
+      industry,
+      tagline: el('demoTagline').value.trim() || undefined,
+      blurb: el('demoBlurb').value.trim() || undefined,
+      phone: el('demoPhone').value.trim() || undefined,
+      email: el('demoEmail').value.trim() || undefined,
+      city: el('demoCity').value.trim() || undefined,
+      logoUrl: el('demoLogo').value.trim() || undefined,
+    };
+    const r = await api('/api/demos', { method: 'POST', body: JSON.stringify(body) });
+    el('created').classList.remove('hidden');
+    el('created').innerHTML = `Demo ready for <b>${escapeHtml(businessName)}</b>.
+      <a href="${escapeHtml(r.previewUrl)}" target="_blank" rel="noopener">Open preview</a>
+      · theme <span class="mono">${escapeHtml(r.themeId)}</span>`;
+    el('demo-form').classList.add('hidden');
+    el('demoName').value = el('demoTagline').value = el('demoBlurb').value = '';
+    el('demoPhone').value = el('demoEmail').value = el('demoCity').value = el('demoLogo').value = '';
+    window.open(r.previewUrl, '_blank', 'noopener');
+    await loadProjects();
+    openProject(r.projectId);
+  } catch (e) {
+    el('demo-err').textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Forge demo preview';
+  }
+}
+
 // --- wire up ---
 el('unlock').addEventListener('click', unlock);
 el('token').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
 el('signout').addEventListener('click', signOut);
-el('new-btn').addEventListener('click', () => el('new-form').classList.toggle('hidden'));
+el('new-btn').addEventListener('click', () => {
+  el('demo-form').classList.add('hidden');
+  el('new-form').classList.toggle('hidden');
+});
 el('cancel-new').addEventListener('click', () => el('new-form').classList.add('hidden'));
 el('create').addEventListener('click', createProject);
+el('demo-btn').addEventListener('click', showDemoForm);
+el('cancel-demo').addEventListener('click', () => el('demo-form').classList.add('hidden'));
+el('create-demo').addEventListener('click', createDemo);
 
 // Boot: if we have a stored token, try it; otherwise show the gate.
 (async function boot() {

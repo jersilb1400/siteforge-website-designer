@@ -24,7 +24,18 @@ interface SourceRow {
 
 function mergeConfirmed(rows: SourceRow[]) {
   const confirmed = rows.filter((r) => r.review_status === 'confirmed' || r.review_status === 'edited');
-  const out: { about?: string; description?: string; headings?: string[]; hours?: string; palette?: string[] } = {};
+  const out: {
+    about?: string;
+    description?: string;
+    headings?: string[];
+    hours?: string;
+    palette?: string[];
+    services?: Array<{ name: string; desc: string }>;
+    servicesTitle?: string;
+    highlights?: string[];
+    ctaLabel?: string;
+    demo?: boolean;
+  } = {};
   for (const r of confirmed) {
     let d: any = {};
     try { d = JSON.parse(r.data_json); } catch { /* ignore */ }
@@ -33,6 +44,11 @@ function mergeConfirmed(rows: SourceRow[]) {
     out.hours ??= d.hours;
     if (!out.headings && Array.isArray(d.headings)) out.headings = d.headings;
     if (!out.palette && Array.isArray(d.palette)) out.palette = d.palette;
+    if (!out.services && Array.isArray(d.services) && d.services.length) out.services = d.services;
+    out.servicesTitle ??= d.servicesTitle;
+    if (!out.highlights && Array.isArray(d.highlights)) out.highlights = d.highlights;
+    out.ctaLabel ??= d.ctaLabel;
+    if (d.demo) out.demo = true;
   }
   return { confirmed, merged: out };
 }

@@ -25,9 +25,17 @@ function hero(spec: SiteSpec, theme: Theme): string {
     theme.layout.hero !== 'centered' && img
       ? `<div class="sf-hero-media"><img src="${attr(img.src)}" alt="${attr(img.alt || spec.business.name)}" loading="eager" width="800" height="600" /></div>`
       : '';
+  // When the headline is the brand name, surface the tagline (or industry) as
+  // the eyebrow so the first viewport stays brand-first without a weak label.
+  const brandIsHero = c.heroHeadline.trim().toLowerCase() === spec.business.name.trim().toLowerCase();
+  const eyebrow = brandIsHero
+    ? spec.business.tagline || spec.business.industry
+    : spec.business.tagline
+      ? spec.business.industry
+      : '';
   return `<section class="sf-hero sf-hero--${theme.layout.hero}" id="home">
   <div class="sf-hero-body">
-    ${spec.business.tagline ? `<p class="sf-eyebrow">${esc(spec.business.industry)}</p>` : ''}
+    ${eyebrow ? `<p class="sf-eyebrow">${esc(eyebrow)}</p>` : ''}
     <h1 class="sf-hero-title">${esc(c.heroHeadline)}</h1>
     <p class="sf-hero-sub">${esc(c.heroSub)}</p>
     <div class="sf-hero-cta">

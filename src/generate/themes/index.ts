@@ -6,13 +6,14 @@ import { ledger } from './ledger';
 import { meridian } from './meridian';
 import { forge } from './forge';
 import { gallery } from './gallery';
+import { haven } from './haven';
 
 export type { Theme } from './types';
 
-// Seven curated theme skeletons. Industry claims are mutually exclusive so
+// Curated theme skeletons. Industry claims are mutually exclusive so
 // auto-selection is deterministic; the design director then layers bespoke
 // fonts/palette/signature on top of whichever skeleton is chosen.
-export const THEMES: Theme[] = [atelier, sanctuary, storefront, ledger, meridian, forge, gallery];
+export const THEMES: Theme[] = [atelier, sanctuary, storefront, ledger, meridian, forge, gallery, haven];
 export const DEFAULT_THEME = atelier;
 
 export function getTheme(id: string | undefined): Theme {

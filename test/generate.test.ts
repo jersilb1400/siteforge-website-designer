@@ -139,6 +139,7 @@ describe('theme selection', () => {
     expect(selectTheme('Church / Ministry', 'Bold').id).toBe('sanctuary');
     expect(selectTheme('Restaurant / Cafe', 'Minimal').id).toBe('storefront');
     expect(selectTheme('Health & wellness', 'Warm').id).toBe('meridian');
+    expect(selectTheme('Day spa / Salon', 'Warm').id).toBe('haven');
     expect(selectTheme('Home & trade services', 'Bold').id).toBe('forge');
     expect(selectTheme('Nonprofit', 'Professional').id).toBe('ledger');
     expect(selectTheme('Personal brand / portfolio', 'Minimal').id).toBe('gallery');

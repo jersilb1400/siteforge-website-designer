@@ -185,7 +185,7 @@ label.field .lbl {
   margin-bottom: 0.35rem;
 }
 label.field .help { display: block; font-size: 0.85rem; color: var(--steel); margin-bottom: 0.5rem; }
-input[type=text], input[type=email], input[type=url], input[type=password], textarea, select {
+input[type=text], input[type=email], input[type=url], input[type=tel], input[type=password], textarea, select {
   width: 100%;
   font-family: var(--font-display);
   font-size: 1rem;

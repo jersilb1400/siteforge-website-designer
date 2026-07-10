@@ -44,7 +44,10 @@
           <div class="eyebrow">workshop</div>
           <h1 style="margin-top:0.5rem;">Projects</h1>
         </div>
-        <button id="new-btn" class="btn primary">+ New project</button>
+        <div class="row" style="gap:0.5rem;">
+          <button id="demo-btn" class="btn">Create demo</button>
+          <button id="new-btn" class="btn primary">+ New project</button>
+        </div>
       </div>
 
       <!-- new project form -->
@@ -66,6 +69,51 @@
         <div class="row">
           <button id="create" class="btn primary">Create & get interview link</button>
           <button id="cancel-new" class="btn ghost">Cancel</button>
+        </div>
+      </div>
+
+      <!-- sales demo form -->
+      <div id="demo-form" class="card stack hidden" style="margin-bottom:1.5rem;">
+        <h2>Create a sales demo</h2>
+        <p class="muted" style="margin:0;">Build a polished sample site from a short brief — no interview required. Great for pitching prospects.</p>
+        <label class="field">
+          <span class="lbl">Business name</span>
+          <input type="text" id="demoName" placeholder="e.g. Aura Day Spa" />
+        </label>
+        <label class="field">
+          <span class="lbl">Industry</span>
+          <select id="demoIndustry"></select>
+        </label>
+        <label class="field">
+          <span class="lbl">Tagline <span class="muted">(optional)</span></span>
+          <input type="text" id="demoTagline" placeholder="e.g. Rest, restore, renew" />
+        </label>
+        <label class="field">
+          <span class="lbl">Short about <span class="muted">(optional)</span></span>
+          <textarea id="demoBlurb" rows="3" placeholder="A sentence or two about the business"></textarea>
+        </label>
+        <div class="row" style="gap:1rem;align-items:flex-start;">
+          <label class="field grow">
+            <span class="lbl">Phone <span class="muted">(optional)</span></span>
+            <input type="tel" id="demoPhone" placeholder="(555) 010-2000" />
+          </label>
+          <label class="field grow">
+            <span class="lbl">Email <span class="muted">(optional)</span></span>
+            <input type="email" id="demoEmail" placeholder="hello@example.com" />
+          </label>
+        </div>
+        <label class="field">
+          <span class="lbl">City <span class="muted">(optional)</span></span>
+          <input type="text" id="demoCity" placeholder="e.g. Austin, TX" />
+        </label>
+        <label class="field">
+          <span class="lbl">Logo URL <span class="muted">(optional)</span></span>
+          <input type="url" id="demoLogo" placeholder="https://…" />
+        </label>
+        <p id="demo-err" class="error" role="alert"></p>
+        <div class="row">
+          <button id="create-demo" class="btn primary">Forge demo preview</button>
+          <button id="cancel-demo" class="btn ghost">Cancel</button>
         </div>
       </div>
 
