@@ -2,7 +2,7 @@
 // (hero / gallery / service). Prompts are photoreal, brand-safe (no text,
 // logos, watermarks, or readable signage), and tuned per industry + theme.
 
-export type ImageRole = 'hero' | 'gallery' | 'service' | 'atmosphere';
+export type ImageRole = 'hero' | 'gallery' | 'service' | 'atmosphere' | 'about';
 
 export interface ImagePromptBrief {
   businessName: string;
@@ -10,6 +10,7 @@ export interface ImagePromptBrief {
   tone?: string;
   themeId?: string;
   tagline?: string;
+  recipeId?: string;
 }
 
 export interface ImagePrompt {
@@ -17,6 +18,11 @@ export interface ImagePrompt {
   alt: string;
   aspectRatio: '16:9' | '4:3' | '3:2' | '1:1';
   prompt: string;
+}
+
+export interface ImageSlotNeed {
+  role: ImageRole;
+  aspectRatio: '16:9' | '4:3' | '3:2' | '1:1';
 }
 
 const NEGATIVE =
@@ -179,7 +185,6 @@ export function buildImagePrompts(brief: ImagePromptBrief, count: number): Image
   let gi = 0;
   let si = 0;
   while (out.length < n) {
-    // Alternate gallery and service for variety after hero.
     if (out.length % 3 === 0 && scenes.service.length) {
       const scene = scenes.service[si % scenes.service.length]!;
       si++;
@@ -202,4 +207,62 @@ export function buildImagePrompts(brief: ImagePromptBrief, count: number): Image
   }
 
   return out.slice(0, n);
+}
+
+/** Build prompts for exact composition slots (role + aspect). */
+export function buildImagePromptsForSlots(brief: ImagePromptBrief, slots: ImageSlotNeed[]): ImagePrompt[] {
+  if (!slots.length) return [];
+  const scenes = industryScenes(brief.industry);
+  const cue = themeCue(brief.themeId, brief.tone);
+  const name = brief.businessName || 'the business';
+  let gi = 0;
+  let si = 0;
+  let ai = 0;
+
+  return slots.map((slot) => {
+    if (slot.role === 'hero') {
+      return {
+        role: 'hero',
+        alt: `${name} — signature space`,
+        aspectRatio: slot.aspectRatio,
+        prompt: `Editorial website hero photograph for ${name}, a ${brief.industry} business. Scene: ${scenes.hero}. Mood: ${cue}. Wide cinematic composition for a full-bleed hero. ${NEGATIVE}`,
+      };
+    }
+    if (slot.role === 'about') {
+      const scene = scenes.gallery[ai++ % scenes.gallery.length]!;
+      return {
+        role: 'about',
+        alt: `${name} — about`,
+        aspectRatio: slot.aspectRatio,
+        prompt: `Website about-page photograph for ${name} (${brief.industry}): ${scene}. Mood: ${cue}. Portrait-friendly composition. ${NEGATIVE}`,
+      };
+    }
+    if (slot.role === 'service') {
+      const scene =
+        scenes.service[si++ % Math.max(1, scenes.service.length)] ||
+        scenes.gallery[gi++ % scenes.gallery.length]!;
+      return {
+        role: 'service',
+        alt: `${name} — offering`,
+        aspectRatio: slot.aspectRatio,
+        prompt: `Website service card photograph for ${name} (${brief.industry}): ${scene}. Mood: ${cue}. ${NEGATIVE}`,
+      };
+    }
+    if (slot.role === 'atmosphere') {
+      const scene = scenes.gallery[ai++ % scenes.gallery.length]!;
+      return {
+        role: 'atmosphere',
+        alt: `${name} — atmosphere`,
+        aspectRatio: slot.aspectRatio,
+        prompt: `Atmospheric website photograph for ${name} (${brief.industry}): ${scene}. Mood: ${cue}. Soft, evocative, not a product shot. ${NEGATIVE}`,
+      };
+    }
+    const scene = scenes.gallery[gi++ % scenes.gallery.length]!;
+    return {
+      role: 'gallery',
+      alt: `${name} — ${scene.split(',')[0]}`,
+      aspectRatio: slot.aspectRatio,
+      prompt: `Website gallery photograph for ${name} (${brief.industry}): ${scene}. Mood: ${cue}. ${NEGATIVE}`,
+    };
+  });
 }

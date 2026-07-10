@@ -11,11 +11,12 @@ import { sectionsForPages, type SiteSpec, type SiteImage } from './spec';
 import { qualityCheckBundle } from './quality';
 import { deriveDesign } from './design-director';
 import { ensureProjectPhotos } from './images/generate-assets';
+import { getRecipe, selectRecipe, resolveComposition } from './composition';
+import type { ImageRole } from './images/prompts';
+import { critiqueBuild, applyCritiqueFixes } from './critique';
 
 // Orchestrates a build: interview profile + CONFIRMED source content -> spec ->
-// rendered, self-contained bundle in R2 -> versioned `builds` row. Spec assembly
-// and finalize are separate so the NL revision loop can reuse finalize with a
-// mutated spec. Preview is served from R2 by the /preview route.
+// rendered, self-contained bundle in R2 -> versioned `builds` row.
 
 interface SourceRow {
   source_type: string;
@@ -36,10 +37,17 @@ function mergeConfirmed(rows: SourceRow[]) {
     highlights?: string[];
     ctaLabel?: string;
     demo?: boolean;
+    testimonials?: Array<{ quote: string; attribution: string }>;
+    faq?: Array<{ q: string; a: string }>;
+    team?: Array<{ name: string; role: string; bio?: string }>;
   } = {};
   for (const r of confirmed) {
     let d: any = {};
-    try { d = JSON.parse(r.data_json); } catch { /* ignore */ }
+    try {
+      d = JSON.parse(r.data_json);
+    } catch {
+      /* ignore */
+    }
     out.about ??= d.about;
     out.description ??= d.description;
     out.hours ??= d.hours;
@@ -50,6 +58,9 @@ function mergeConfirmed(rows: SourceRow[]) {
     if (!out.highlights && Array.isArray(d.highlights)) out.highlights = d.highlights;
     out.ctaLabel ??= d.ctaLabel;
     if (d.demo) out.demo = true;
+    if (!out.testimonials && Array.isArray(d.testimonials)) out.testimonials = d.testimonials;
+    if (!out.faq && Array.isArray(d.faq)) out.faq = d.faq;
+    if (!out.team && Array.isArray(d.team)) out.team = d.team;
   }
   return { confirmed, merged: out };
 }
@@ -67,8 +78,43 @@ export interface BuildResult {
   quality: { score: number; pass: boolean };
 }
 
-// Assemble the full spec from the interview profile + confirmed source content.
-// Images are left empty here; finalize copies approved assets into the build.
+const ROLE_ORDER: ImageRole[] = ['hero', 'about', 'service', 'service', 'service', 'gallery', 'gallery', 'atmosphere'];
+
+function roleFromSourceUrl(sourceUrl: string | null): ImageRole | undefined {
+  if (!sourceUrl) return undefined;
+  const m = /openrouter:[^:]+:(\w+)/i.exec(sourceUrl);
+  if (!m) return undefined;
+  const role = m[1]!.toLowerCase();
+  if (role === 'hero' || role === 'about' || role === 'service' || role === 'gallery' || role === 'atmosphere') {
+    return role;
+  }
+  return undefined;
+}
+
+function assignRoles(images: SiteImage[], sourceRoles: Array<ImageRole | undefined>): SiteImage[] {
+  const out: SiteImage[] = images.map((im, i) => ({
+    ...im,
+    role: sourceRoles[i] || undefined,
+  }));
+  let slot = 0;
+  for (let i = 0; i < out.length; i++) {
+    if (out[i]!.role) continue;
+    const role = ROLE_ORDER[Math.min(slot, ROLE_ORDER.length - 1)]!;
+    // Skip hero slot if already assigned
+    if (role === 'hero' && out.some((im) => im.role === 'hero')) {
+      slot++;
+      out[i] = { ...out[i]!, role: ROLE_ORDER[Math.min(slot, ROLE_ORDER.length - 1)]! };
+    } else {
+      out[i] = { ...out[i]!, role };
+    }
+    slot++;
+  }
+  if (!out.some((im) => im.role === 'hero') && out[0]) {
+    out[0] = { ...out[0], role: 'hero' };
+  }
+  return out;
+}
+
 export async function assembleSpec(env: Env, projectId: string, themeOverride?: string): Promise<SiteSpec> {
   const session = await one<{ id: string }>(
     env,
@@ -94,16 +140,27 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
   if (themeOverride && !themeExists(themeOverride)) throw new BadRequest(`Unknown themeId "${themeOverride}".`);
   const theme = themeOverride ? getTheme(themeOverride) : selectTheme(profile.business.industry, profile.tone);
 
-  // Design director: bespoke, guardrailed art direction (fonts/signature/colors).
-  // No-ops (null) without an API key — the theme defaults then stand.
   const design = await deriveDesign(
     env,
-    { name: profile.business.name, industry: profile.business.industry, tone: profile.tone, story: profile.business.story },
+    {
+      name: profile.business.name,
+      industry: profile.business.industry,
+      tone: profile.tone,
+      story: profile.business.story,
+      demo: !!merged.demo,
+    },
     theme,
   );
 
-  // Palette: the design director's brand/accent win when present (validated
-  // hex), else fall back to explicit interview colors / scrape / tone default.
+  const recipe = design?.composition
+    ? getRecipe(design.recipeId)
+    : selectRecipe({
+        industry: profile.business.industry,
+        tone: profile.tone,
+        themeId: theme.id,
+      });
+  const composition = design?.composition ?? resolveComposition(recipe);
+
   const palette = resolvePalette({
     brandColors: design?.brand ? `${design.brand} ${design.accent ?? ''}` : profile.brand.colors,
     generatePalette: design?.brand ? false : profile.brand.generatePalette,
@@ -111,14 +168,29 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
     tone: profile.tone,
   });
 
-  const contentInputs: ContentInputs = { profile, confirmed: merged };
+  const contentInputs: ContentInputs = {
+    profile,
+    confirmed: merged,
+    allowInventedSocial: composition.allowInventedSocial && !!merged.demo,
+    brandFirst: composition.brandFirst,
+  };
   const content = await generateContent(env, contentInputs);
 
   return {
     projectId,
     themeId: theme.id,
+    demo: !!merged.demo,
+    composition,
     ...(design
-      ? { design: { fontDisplay: design.fontDisplay, fontBody: design.fontBody, fontHref: design.fontHref, signatureCss: design.signatureCss, rationale: design.rationale } }
+      ? {
+          design: {
+            fontDisplay: design.fontDisplay,
+            fontBody: design.fontBody,
+            fontHref: design.fontHref,
+            signatureCss: design.signatureCss,
+            rationale: design.rationale,
+          },
+        }
       : {}),
     business: {
       name: profile.business.name,
@@ -134,7 +206,7 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
       hours: cleanHours(profile.contact.hours || merged.hours || ''),
       socials: {},
     },
-    sections: sectionsForPages(profile.pages),
+    sections: sectionsForPages(profile.pages, recipe.extraPages),
     palette,
     images: [],
     content,
@@ -142,16 +214,12 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
   };
 }
 
-// Reserve version, copy approved images, render, quality-check, store the build.
 export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec): Promise<BuildResult> {
   const buildId = id('build');
   const buildPrefix = `builds/${buildId}`;
   const version = await reserveBuild(env, projectId, buildId);
 
   try {
-    // Content-ethics gate: ONLY individually-approved images may be published.
-    // Customer uploads (…/uploads/…, …/logo/…) sort ahead of scraped/stock so
-    // provided photos win the hero and gallery.
     const assetRows = await all<{
       id: string;
       r2_key: string;
@@ -175,6 +243,7 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
     );
 
     const images: SiteImage[] = [];
+    const sourceRoles: Array<ImageRole | undefined> = [];
     let logo: SiteImage | undefined;
     let i = 0;
     for (const a of assetRows) {
@@ -189,24 +258,43 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
         logo = { src: rel, alt: a.alt_text || `${spec.business.name} logo` };
         continue;
       }
-      if (a.kind === 'logo') continue; // only one logo
+      if (a.kind === 'logo') continue;
       if (images.length >= 12) continue;
       const rel = `media/${i}.${ext}`;
       await env.R2.put(`${buildPrefix}/${rel}`, await obj.arrayBuffer(), {
         httpMetadata: { contentType: obj.httpMetadata?.contentType || 'image/jpeg' },
       });
+      // Uploads prefer hero when first.
+      const isUpload = a.r2_key.includes('/uploads/');
+      const parsed = roleFromSourceUrl(a.source_url);
+      sourceRoles.push(parsed || (isUpload && images.length === 0 ? 'hero' : undefined));
       images.push({ src: rel, alt: a.alt_text || spec.business.name });
       i++;
     }
-    spec = { ...spec, images, logo, generatedAt: new Date().toISOString() };
+    spec = {
+      ...spec,
+      images: assignRoles(images, sourceRoles),
+      logo,
+      generatedAt: new Date().toISOString(),
+    };
 
-    const { files } = renderSite(spec);
+    let { files } = renderSite(spec);
+
+    // Design critique + one fix pass (cost-capped).
+    const homeHtml = files['index.html'] || '';
+    let critique = await critiqueBuild(env, spec, homeHtml);
+    if (!critique.pass) {
+      spec = applyCritiqueFixes(spec, critique);
+      ({ files } = renderSite(spec));
+      critique = await critiqueBuild(env, spec, files['index.html'] || '');
+    }
+
     for (const [path, body] of Object.entries(files)) {
       await env.R2.put(`${buildPrefix}/${path}`, body, { httpMetadata: { contentType: contentTypeFor(path) } });
     }
 
-    // Automated quality gate across every page in the multi-page bundle.
     const quality = qualityCheckBundle(files, spec);
+    const lighthousePayload = { ...quality, designCritique: critique };
 
     const previewUrl = `/preview/${buildId}/`;
     await run(
@@ -217,14 +305,16 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
       buildPrefix,
       previewUrl,
       JSON.stringify(spec),
-      JSON.stringify(quality),
+      JSON.stringify(lighthousePayload),
       buildId,
     );
     await run(env, `UPDATE projects SET status='preview', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`, projectId);
 
     return { buildId, version, themeId: spec.themeId, previewUrl, quality: { score: quality.score, pass: quality.pass } };
   } catch (err) {
-    await run(env, `UPDATE builds SET status='failed', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`, buildId).catch(() => {});
+    await run(env, `UPDATE builds SET status='failed', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`, buildId).catch(
+      () => {},
+    );
     throw err;
   }
 }
@@ -236,7 +326,7 @@ async function reserveBuild(env: Env, projectId: string, buildId: string): Promi
       await run(env, `INSERT INTO builds (id, project_id, version, status) VALUES (?, ?, ?, 'building')`, buildId, projectId, version);
       return version;
     } catch {
-      // Likely a UNIQUE(project_id, version) race — recompute and retry.
+      // UNIQUE race — retry
     }
   }
   throw new BadRequest('Could not reserve a build version; please retry.');
@@ -245,7 +335,7 @@ async function reserveBuild(env: Env, projectId: string, buildId: string): Promi
 export async function generateBuild(env: Env, projectId: string, themeOverride?: string): Promise<BuildResult> {
   await requireProject(env, projectId);
   const spec = await assembleSpec(env, projectId, themeOverride);
-  // Gap-fill AI / stock photos when the project lacks enough confirmed images.
+  const recipe = getRecipe(spec.composition?.recipeId);
   await ensureProjectPhotos(
     env,
     projectId,
@@ -255,8 +345,9 @@ export async function generateBuild(env: Env, projectId: string, themeOverride?:
       tone: spec.business.tone,
       themeId: spec.themeId,
       tagline: spec.business.tagline,
+      recipeId: recipe.id,
     },
-    { target: 6, allowStockFallback: true },
+    { target: Math.max(6, recipe.imageSlots.length), allowStockFallback: true, slots: recipe.imageSlots },
   );
   return finalizeBuild(env, projectId, spec);
 }

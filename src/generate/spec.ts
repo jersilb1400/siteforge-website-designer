@@ -1,11 +1,13 @@
 import type { PaletteTokens } from './palette';
+import type { CompositionResolved } from './composition/types';
+import type { ImageRole } from './images/prompts';
 
 // The fully-resolved input to rendering: everything a theme needs to produce a
 // finished site. Assembled from the interview profile + confirmed source_content
 // + generated copy. Persisted as builds.spec_json for reproducible rebuilds.
 
 export interface SectionSpec {
-  id: string; // page id (home | about | services | gallery | contact)
+  id: string; // page id (home | about | services | gallery | contact | team | faq | give | visit)
   label: string; // nav label
   file: string; // bundle filename (index.html | about.html | …)
   href: string; // nav href (same as file for multi-page sites)
@@ -23,11 +25,20 @@ export interface GeneratedContent {
   highlights: string[];
   ctaTitle: string;
   ctaBody: string;
+  /** Conversion kind: booking | donation | contact | services */
+  ctaKind?: string;
+  secondaryCtaLabel?: string;
+  trustLine?: string;
+  testimonials?: Array<{ quote: string; attribution: string }>;
+  faq?: Array<{ q: string; a: string }>;
+  team?: Array<{ name: string; role: string; bio?: string }>;
 }
 
 export interface SiteImage {
   src: string; // absolute URL or preview-relative path
   alt: string;
+  role?: ImageRole;
+  aspectRatio?: string;
 }
 
 export interface SiteSpec {
@@ -53,6 +64,10 @@ export interface SiteSpec {
   /** Confirmed logo asset, baked as media/logo.* in the bundle when present. */
   logo?: SiteImage;
   content: GeneratedContent;
+  /** Guardrailed composition recipe (layout shape). */
+  composition?: CompositionResolved;
+  /** True when this build is a sales demo (may invent social proof). */
+  demo?: boolean;
   // Optional bespoke design-director overrides layered on the theme skeleton.
   design?: {
     fontDisplay: string;
@@ -65,7 +80,7 @@ export interface SiteSpec {
 }
 
 export function sectionFile(id: string): string {
-  return id === 'home' ? 'index.html' : `${id}.html`;
+  return id === 'home' ? 'index.html' : id === 'visit' || id === 'give' ? `${id}.html` : `${id}.html`;
 }
 
 function section(id: string, label: string): SectionSpec {
@@ -91,12 +106,20 @@ const PAGE_TO_SECTION: Record<string, { id: string; label: string }> = {
   Gallery: { id: 'gallery', label: 'Gallery' },
   Contact: { id: 'contact', label: 'Contact' },
   'Location & Hours': { id: 'contact', label: 'Visit' },
-  Visit: { id: 'contact', label: 'Visit' },
+  Visit: { id: 'visit', label: 'Visit' },
+  Give: { id: 'give', label: 'Give' },
+  Donate: { id: 'give', label: 'Give' },
+  Team: { id: 'team', label: 'Team' },
+  Staff: { id: 'team', label: 'Team' },
+  FAQ: { id: 'faq', label: 'FAQ' },
   'Get a Quote': { id: 'contact', label: 'Get a Quote' },
   'Service Area': { id: 'about', label: 'Service Area' },
 };
 
-export function sectionsForPages(pages: string[]): SectionSpec[] {
+export function sectionsForPages(
+  pages: string[],
+  extra?: Array<{ id: string; label: string }>,
+): SectionSpec[] {
   const seen = new Set<string>();
   const out: SectionSpec[] = [section('home', 'Home')];
   seen.add('home');
@@ -107,7 +130,13 @@ export function sectionsForPages(pages: string[]): SectionSpec[] {
       seen.add(s.id);
     }
   }
-  // Always end with contact.
+  for (const e of extra ?? []) {
+    if (!seen.has(e.id)) {
+      out.push(section(e.id, e.label));
+      seen.add(e.id);
+    }
+  }
+  // Always end with contact (unless visit/give already cover church flows — still keep contact).
   if (!seen.has('contact')) out.push(section('contact', 'Contact'));
   return out;
 }
@@ -120,4 +149,22 @@ export function contactHref(sections: SectionSpec[]): string {
 /** Href for a section id, falling back to a sensible default file. */
 export function hrefFor(sections: SectionSpec[], id: string): string {
   return sections.find((s) => s.id === id)?.href ?? sectionFile(id);
+}
+
+/** First image matching role, else fall back by index / any image. */
+export function imgByRole(
+  spec: SiteSpec,
+  role: ImageRole,
+  fallbackIndex = 0,
+): SiteImage | undefined {
+  const byRole = spec.images.find((im) => im.role === role);
+  if (byRole) return byRole;
+  if (!spec.images.length) return undefined;
+  return spec.images[fallbackIndex % spec.images.length];
+}
+
+/** All images for a role (e.g. service cards). */
+export function imgsByRole(spec: SiteSpec, role: ImageRole): SiteImage[] {
+  const matched = spec.images.filter((im) => im.role === role);
+  return matched.length ? matched : [];
 }

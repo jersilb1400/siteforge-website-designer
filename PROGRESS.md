@@ -16,7 +16,7 @@ done, what is *verified*, and what is next.
 | 0 | Foundation | **Implemented & locally verified.** `tsc` clean, `wrangler deploy --dry-run` bundles all bindings, `wrangler dev` serves `/api/health` + `/api/ready` (D1+KV live). Real production `wrangler deploy` pending Jeremy's Cloudflare credentials + provisioned binding IDs. |
 | 1 | Interview Engine | **Implemented & verified end-to-end** against local D1 via `wrangler dev` (create project → 20-question adaptive interview → structured JSON profile; status advanced to `ingesting`; resume is idempotent). Only AI *enrichment* (industry page suggestions, thin-answer follow-ups) is unverified, pending a live `ANTHROPIC_API_KEY`. |
 | 2 | Ingestion Pipeline | **Implemented & locally verified.** URL → queue → HTMLRewriter extract → R2 images → normalized `source_content` → confirm/reject gate, verified end-to-end in `wrangler dev`. Browser Rendering path is a documented stub (paid plan); fetch fallback ships. |
-| 3 | Generation Engine | **Core implemented & locally verified.** Interview + confirmed content → theme select → palette → copy (Claude + deterministic fallback) → self-contained HTML bundle in R2 → versioned build → preview served from R2. **Design upgrade:** 7 curated themes + a guardrailed "design director" (bespoke fonts/signature/palette per client, no arbitrary CSS). Verified end-to-end in `wrangler dev`. |
+| 3 | Generation Engine | **Core implemented & locally verified.** Interview + confirmed content → theme select → **composition recipe** → palette → copy (Claude + deterministic fallback) → role-assigned photos (OpenRouter slots) → self-contained multi-page HTML in R2 → design critique fix pass → versioned build → preview. **2026-07-10 quality upgrade:** 6 recipes, conversion copy, art-directed imagery, critique loop (ADR-0020). |
 | 4 | Revision & Production Deploy | **Implemented & locally verified.** NL revision loop, versioned builds, publish/rollback, `/site/:projectId/` production surface, quality gate. Real Lighthouse on a published site: Perf 100 / A11y 94 / BP 96 / SEO 100. |
 | 5 | Polish & Extend | **MCP server shipped** (`POST /mcp`, verified). Custom domains, multi-tenant auth, billing documented + escalation-gated (paid). |
 
@@ -221,3 +221,15 @@ escalation triggers):
   interview run are blocked on Jeremy's credentials/secrets (see Known gaps 1–4).
 - **Next iteration**: once #1–#4 clear, verify Phases 0 + 1 for real; only then begin
   Phase 2 (Ingestion) per the phase-gating rule.
+
+### 2026-07-10 — Next-level site quality (ADR-0020)
+- Composition recipe library (`src/generate/composition/`): 6 industry-native recipes
+  driving hero mode, home teaser order, extra pages, image slots.
+- Art-directed imagery: `SiteImage.role` + slot-based OpenRouter prompts; sections use
+  `imgByRole` / `imgsByRole`.
+- Conversion copy: industry voice packs, goal-driven CTAs, testimonials/FAQ/team
+  (demo-invented only when `demo` + recipe allows).
+- Design critique loop (`critique.ts`) + one fix pass in `finalizeBuild`; non-blocking
+  design checks in `quality.ts`. Font pairings no longer use Inter as body.
+- Shared theme CSS for testimonials, FAQ, team, sticky CTA, full-bleed recipe heroes.
+- Unit tests: 71 green; `tsc` clean.

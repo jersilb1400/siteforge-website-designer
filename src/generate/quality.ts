@@ -55,6 +55,34 @@ export function qualityCheck(html: string, spec: SiteSpec): QualityResult {
       ok: contrast(spec.palette.accent, spec.palette.bg) >= 4.5,
       note: 'accent color meets WCAG AA on background',
     },
+    // Non-blocking design checks (weight 0) — visible in lighthouse_json, do not fail publish.
+    {
+      id: 'design-cta',
+      weight: 0,
+      ok: !/^(learn more|click here|read more)$/i.test(spec.content.heroCtaLabel.trim()),
+      note: 'primary CTA is not a weak generic label',
+    },
+    {
+      id: 'design-font',
+      weight: 0,
+      ok: !/Inter/i.test(spec.design?.fontBody || ''),
+      note: 'body font is not Inter',
+    },
+    {
+      id: 'design-composition',
+      weight: 0,
+      ok: !!spec.composition?.recipeId,
+      note: 'composition recipe attached',
+    },
+    {
+      id: 'design-hero-photo',
+      weight: 0,
+      ok:
+        !(spec.composition?.hero === 'full-bleed' || spec.composition?.brandFirst) ||
+        /sf-hero--has-photo|sf-hero-media--bleed/.test(html) ||
+        spec.images.some((im) => im.role === 'hero'),
+      note: 'premium recipe has a hero photo',
+    },
   ];
 
   const total = checks.reduce((s, c) => s + c.weight, 0);

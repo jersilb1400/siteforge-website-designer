@@ -211,3 +211,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** Prospects and clients provide brand logos and real photos; demos/stock alone are not enough for a finished pitch site.
 - **Decision:** `POST /api/projects/:id/uploads` accepts multipart logo/photo uploads into R2 as auto-confirmed assets. Logos render in the nav (`spec.logo`); uploaded photos sort ahead of scraped/stock in `finalizeBuild`. Dashboard exposes Upload logo / Upload photos on the project detail view.
 - **Consequences:** Operator is the content-ethics gate for customer-supplied files (unlike scraped images, which stay pending until approved). Asset file previews use the `sf_operator` cookie so `<img>` tags work without Bearer headers.
+
+## ADR-0020 — Composition recipes + design critique loop
+
+- **Status:** Accepted (2026-07-10)
+- **Context:** Themes alone produced recolored clones; quality gate only checked SEO/a11y. Sales demos and client sites needed art-directed layouts, role-assigned photography, conversion copy, and a fix pass for template-y output.
+- **Decision:** Guardrailed `CompositionRecipe` catalog (`editorial-luxury`, `warm-hospitality`, `reverent-sanctuary`, `clean-clinic`, `craft-trade`, `mission-ledger`) drives hero mode, home teaser order, extra pages (team/faq/give/visit), and image slots. `SiteImage.role` assigns hero/service/gallery/about/atmosphere. Content gains testimonials/FAQ/team + goal-driven CTAs (no "Learn more"). Post-render `critiqueBuild` + one `applyCritiqueFixes` pass; non-blocking design checks in `quality.ts`. Font pairings drop Inter as body.
+- **Consequences:** Spec JSON grows (`composition`, richer `content`). Demos may invent social proof; client builds only use sourced testimonials/FAQ/team. OpenRouter gap-fill follows recipe slots. Lighthouse 90+ structural gate unchanged.

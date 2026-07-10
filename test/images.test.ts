@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildImagePrompts } from '../src/generate/images/prompts';
+import { buildImagePrompts, buildImagePromptsForSlots } from '../src/generate/images/prompts';
 import { imageModel } from '../src/lib/config';
 import type { Env } from '../src/types';
+import { selectRecipe, RECIPES } from '../src/generate/composition';
+import { applyCritiqueFixes, critiqueBuild } from '../src/generate/critique';
+import type { SiteSpec } from '../src/generate/spec';
+import { resolvePalette } from '../src/generate/palette';
 
 describe('image prompt pack', () => {
   it('builds hero-first prompts capped at the requested count', () => {
@@ -34,6 +38,73 @@ describe('image prompt pack', () => {
       expect(p[0]!.role).toBe('hero');
       expect(p.every((x) => x.prompt.length > 40)).toBe(true);
     }
+  });
+
+  it('builds prompts for exact composition slots', () => {
+    const recipe = selectRecipe({ industry: 'Day spa / Salon', themeId: 'haven' });
+    const prompts = buildImagePromptsForSlots(
+      { businessName: 'Aura', industry: 'Day spa / Salon', themeId: 'haven' },
+      recipe.imageSlots,
+    );
+    expect(prompts.length).toBe(recipe.imageSlots.length);
+    expect(prompts[0]!.role).toBe('hero');
+    expect(prompts.some((p) => p.role === 'about')).toBe(true);
+    expect(prompts.some((p) => p.role === 'service')).toBe(true);
+  });
+});
+
+describe('composition recipes', () => {
+  it('selects industry-native recipes', () => {
+    expect(selectRecipe({ industry: 'Day spa / Salon', themeId: 'haven' }).id).toBe('editorial-luxury');
+    expect(selectRecipe({ industry: 'Church / Ministry' }).id).toBe('reverent-sanctuary');
+    expect(selectRecipe({ industry: 'Restaurant / Cafe' }).id).toBe('warm-hospitality');
+    expect(selectRecipe({ industry: 'Home & trade services' }).id).toBe('craft-trade');
+  });
+
+  it('has six curated recipes with image slots', () => {
+    expect(RECIPES).toHaveLength(6);
+    expect(RECIPES.every((r) => r.imageSlots.length >= 6)).toBe(true);
+  });
+});
+
+describe('design critique fixes', () => {
+  it('fixes weak CTA and Inter body font', async () => {
+    const spec: SiteSpec = {
+      projectId: 'p',
+      themeId: 'haven',
+      business: { name: 'Aura', tagline: 't', industry: 'Day spa / Salon', tone: 'Warm', story: 's' },
+      contact: { email: '', phone: '', address: '', hours: '', socials: {} },
+      sections: [{ id: 'home', label: 'Home', file: 'index.html', href: 'index.html' }],
+      palette: resolvePalette({ brandColors: '#3e5245' }),
+      images: [{ src: 'media/0.jpg', alt: 'x' }],
+      content: {
+        heroHeadline: 'Aura',
+        heroSub: 'Welcome to Aura',
+        heroCtaLabel: 'Learn more',
+        heroCtaHref: 'contact.html',
+        aboutTitle: 'A',
+        aboutBody: ['b'],
+        servicesTitle: 'S',
+        services: [],
+        highlights: [],
+        ctaTitle: 'C',
+        ctaBody: 'b',
+      },
+      design: {
+        fontDisplay: 'x',
+        fontBody: `'Inter', system-ui, sans-serif`,
+        fontHref: 'https://fonts.googleapis.com/css2?family=Inter&display=swap',
+        signatureCss: '',
+      },
+      generatedAt: new Date().toISOString(),
+    };
+    const critique = await critiqueBuild({} as Env, spec, '<html><body class="sf-hero"></body></html>');
+    expect(critique.pass).toBe(false);
+    const fixed = applyCritiqueFixes(spec, critique);
+    expect(fixed.content.heroCtaLabel).not.toMatch(/learn more/i);
+    expect(fixed.content.heroSub).not.toMatch(/^Welcome to/i);
+    expect(fixed.design?.fontBody).not.toMatch(/Inter/i);
+    expect(fixed.composition?.recipeId).toBeTruthy();
   });
 });
 

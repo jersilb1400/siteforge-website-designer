@@ -92,21 +92,32 @@ describe('multi-page render', () => {
     return {
       projectId: 'p',
       themeId: 'haven',
+      composition: {
+        recipeId: 'editorial-luxury',
+        hero: 'full-bleed',
+        brandFirst: true,
+        homeTeasers: ['services', 'testimonials', 'about', 'gallery'],
+        stickyCta: true,
+        secondaryCta: 'services',
+        allowInventedSocial: true,
+      },
       business: { name: 'Aura', tagline: 'Quiet luxury', industry: 'Day spa / Salon', tone: 'Warm', story: 'A calm retreat.' },
       contact: { email: '', phone: '', address: 'Austin', hours: 'Tue–Sat 9–7', socials: {} },
-      sections: sectionsForPages(['Home', 'Services', 'About', 'Gallery', 'Contact']),
+      sections: sectionsForPages(['Home', 'Services', 'About', 'Gallery', 'Contact'], [{ id: 'faq', label: 'FAQ' }]),
       palette: rp({ brandColors: '#3e5245', tone: 'Warm' }),
       images: [
-        { src: 'media/0.jpg', alt: 'Hero' },
-        { src: 'media/1.jpg', alt: 'Massage' },
-        { src: 'media/2.jpg', alt: 'Salon' },
-        { src: 'media/3.jpg', alt: 'Facial' },
+        { src: 'media/0.jpg', alt: 'Hero', role: 'hero' },
+        { src: 'media/1.jpg', alt: 'Massage', role: 'service' },
+        { src: 'media/2.jpg', alt: 'Salon', role: 'service' },
+        { src: 'media/3.jpg', alt: 'Facial', role: 'gallery' },
       ],
       content: {
         heroHeadline: 'Aura',
         heroSub: 'A calm retreat.',
-        heroCtaLabel: 'Book an appointment',
+        heroCtaLabel: 'Book your ritual',
         heroCtaHref: 'contact.html',
+        secondaryCtaLabel: 'Explore rituals',
+        trustLine: 'Quiet rooms · Skilled hands',
         aboutTitle: 'About Aura',
         aboutBody: ['A calm retreat for skin and body.'],
         servicesTitle: 'Rituals & services',
@@ -117,6 +128,8 @@ describe('multi-page render', () => {
         highlights: ['Licensed therapists'],
         ctaTitle: 'Reserve your time at Aura',
         ctaBody: 'Visit us in Austin.',
+        testimonials: [{ quote: 'Restored.', attribution: 'Maya R.' }],
+        faq: [{ q: 'How do I book?', a: 'Use the book button.' }],
       },
       generatedAt: new Date().toISOString(),
     };
@@ -129,24 +142,41 @@ describe('multi-page render', () => {
     expect(files['about.html']).toBeTruthy();
     expect(files['gallery.html']).toBeTruthy();
     expect(files['contact.html']).toBeTruthy();
+    expect(files['faq.html']).toBeTruthy();
     const home = files['index.html']!;
     expect(home).toContain('href="services.html"');
     expect(home).not.toMatch(/href="#services"/);
     expect(home).toContain('sf-teasers');
+    expect(home).toContain('sf-hero--has-photo');
+    expect(home).toContain('Book your ritual');
+    expect(home).not.toContain('>Learn more<');
+    expect(home).toContain('sf-testimonials');
+    expect(home).toContain('sf-sticky-cta');
     expect(files['services.html']).toContain('sf-page-hero');
     expect(files['services.html']).toContain('Signature Facial');
     expect(files['gallery.html']).toContain('media/');
     expect(files['about.html']).toContain('sf-about--split');
+    expect(files['faq.html']).toContain('sf-faq');
   });
 });
 
 describe('design director (guardrailed)', () => {
   it('resolves a valid pick from the curated pools', () => {
-    const d = resolveDesign({ fontPairing: 'editorial', signature: 'accent-rule', brand: '#0F766E', accent: '#F59E0B', rationale: 'x' });
+    const d = resolveDesign({
+      fontPairing: 'editorial',
+      signature: 'accent-rule',
+      brand: '#0F766E',
+      accent: '#F59E0B',
+      rationale: 'x',
+      industry: 'Day spa / Salon',
+      themeId: 'haven',
+    });
     expect(d).not.toBeNull();
     expect(d!.fontDisplay).toBe(FONT_PAIRINGS['editorial']!.display);
     expect(d!.signatureCss).toBe(SIGNATURES['accent-rule']!);
     expect(d!.brand).toBe('#0f766e'); // lowercased + validated
+    expect(d!.composition?.recipeId).toBe('editorial-luxury');
+    expect(d!.fontBody).not.toMatch(/Inter/i);
   });
 
   it('rejects an unknown font pairing (no arbitrary CSS/fonts)', () => {

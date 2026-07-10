@@ -3,7 +3,12 @@ import { one, run } from '../../lib/db';
 import { id } from '../../lib/id';
 import { generateImage, OpenRouterError } from '../../lib/openrouter';
 import { ingestDemoPhotos } from '../demo/ingest-photos';
-import { buildImagePrompts, type ImagePromptBrief } from './prompts';
+import {
+  buildImagePrompts,
+  buildImagePromptsForSlots,
+  type ImagePromptBrief,
+  type ImageSlotNeed,
+} from './prompts';
 
 // Ensure a project has enough confirmed photo assets for a polished multi-page
 // site. Prefer OpenRouter FLUX generation; fall back to Unsplash packs.
@@ -40,17 +45,15 @@ export interface EnsurePhotosResult {
 }
 
 /**
- * Gap-fill photos up to `target`. Uses OpenRouter when keyed; otherwise
- * (or on failure) pulls Unsplash industry packs. Uploads/scrapes already
- * confirmed are left alone.
+ * Gap-fill photos up to `target` (or exact composition slots when provided).
  */
 export async function ensureProjectPhotos(
   env: Env,
   projectId: string,
   brief: ImagePromptBrief,
-  opts: { target?: number; allowStockFallback?: boolean } = {},
+  opts: { target?: number; allowStockFallback?: boolean; slots?: ImageSlotNeed[] } = {},
 ): Promise<EnsurePhotosResult> {
-  const target = opts.target ?? TARGET_PHOTOS;
+  const target = opts.slots?.length ?? opts.target ?? TARGET_PHOTOS;
   const allowStock = opts.allowStockFallback !== false;
   const existing = await countConfirmedPhotos(env, projectId);
   if (existing >= target) {
@@ -62,7 +65,9 @@ export async function ensureProjectPhotos(
   let costUsd = 0;
 
   if (env.OPENROUTER_API_KEY && need > 0) {
-    const prompts = buildImagePrompts(brief, need);
+    const prompts = opts.slots?.length
+      ? buildImagePromptsForSlots(brief, opts.slots.slice(existing, existing + need))
+      : buildImagePrompts(brief, need);
     for (const p of prompts) {
       try {
         const img = await generateImage(env, {
@@ -90,7 +95,6 @@ export async function ensureProjectPhotos(
       } catch (err) {
         const msg = err instanceof OpenRouterError ? err.message : String(err);
         console.warn('openrouter image skipped', { projectId, role: p.role, err: msg });
-        // Stop the OpenRouter loop on hard auth errors; otherwise continue.
         if (err instanceof OpenRouterError && (err.status === 401 || err.status === 402 || err.status === 403)) {
           break;
         }
