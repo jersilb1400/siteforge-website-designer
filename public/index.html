@@ -21,14 +21,17 @@
     </div>
   </header>
 
-  <main class="wrap" style="padding-top: 2.75rem; padding-bottom: 3.5rem;">
-
-    <!-- gate -->
-    <section id="gate" class="hidden rise" style="max-width: 460px; margin: 3.5rem auto;">
-      <div class="eyebrow">operator access</div>
-      <h1 style="margin:0.75rem 0 0.55rem;">The forge is locked.</h1>
-      <p class="muted" style="max-width:36ch;">Enter your operator token to open the workshop and manage client projects.</p>
-      <div class="card stack" style="margin-top:1.5rem;">
+  <!-- gate: full-bleed forge hearth -->
+  <section id="gate" class="hidden forge-gate rise">
+    <div class="forge-gate-media" aria-hidden="true">
+      <img src="/images/forge-hearth.jpg" alt="" width="2000" height="1333" fetchpriority="high" />
+    </div>
+    <div class="forge-gate-scrim" aria-hidden="true"></div>
+    <div class="forge-gate-body wrap">
+      <div class="brand forge-gate-brand"><span class="mark">SF</span> SiteForge</div>
+      <h1>The forge is locked.</h1>
+      <p class="muted forge-gate-lede">Enter your operator token to open the workshop and manage client projects.</p>
+      <div class="card stack forge-gate-card">
         <label class="field">
           <span class="lbl">Operator token</span>
           <input type="password" id="token" placeholder="Strike the anvil…" autocomplete="off" />
@@ -36,10 +39,17 @@
         <p id="gate-err" class="error" role="alert"></p>
         <button id="unlock" class="btn primary">Unlock the forge</button>
       </div>
-    </section>
+    </div>
+  </section>
 
+  <main class="wrap" style="padding-top: 2.75rem; padding-bottom: 3.5rem;">
     <!-- app -->
     <section id="app" class="hidden">
+      <div class="forge-workshop-hero rise" aria-hidden="true">
+        <img src="/images/forge-sparks.jpg" alt="" width="1600" height="1067" loading="lazy" />
+        <div class="forge-workshop-hero-scrim"></div>
+      </div>
+
       <div class="row rise" style="justify-content:space-between;align-items:flex-end;margin-bottom:1.75rem;">
         <div>
           <div class="eyebrow">workshop</div>

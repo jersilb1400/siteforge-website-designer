@@ -39,6 +39,8 @@ function show(view) {
   el('gate').classList.toggle('hidden', view !== 'gate');
   el('app').classList.toggle('hidden', view !== 'app');
   el('signout').classList.toggle('hidden', view !== 'app');
+  document.body.classList.toggle('is-gate', view === 'gate');
+  document.body.classList.toggle('is-workshop', view === 'app');
 }
 
 function signOut() {
