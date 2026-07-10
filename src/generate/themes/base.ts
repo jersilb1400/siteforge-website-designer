@@ -55,6 +55,13 @@ h1,h2,h3{font-family:var(--font-display);line-height:1.08;margin:0;font-weight:7
 .sf-hero--full-bleed .sf-hero-media{position:absolute;inset:0;z-index:0;opacity:.16}
 .sf-hero--full-bleed .sf-hero-media img{width:100%;height:100%;object-fit:cover}
 .sf-hero--full-bleed .sf-hero-body{position:relative;z-index:1;max-width:46ch}
+/* Centered hero with a real photo: image sits behind copy with a readable scrim. */
+.sf-hero--has-photo{position:relative;isolation:isolate}
+.sf-hero-media--bleed{position:absolute;inset:0;z-index:0;overflow:hidden}
+.sf-hero-media--bleed img{width:100%;height:100%;object-fit:cover;object-position:center}
+.sf-hero--has-photo .sf-hero-body{position:relative;z-index:2}
+.sf-hero--has-photo.sf-hero--centered::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,12,10,.55) 0%,rgba(10,12,10,.72) 55%,rgba(10,12,10,.88) 100%)}
 
 /* sections */
 .sf-section{max-width:var(--maxw);margin:0 auto;padding:clamp(2.5rem,6vw,5rem) 1.25rem;border-top:1px solid var(--line)}

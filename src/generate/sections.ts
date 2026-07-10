@@ -21,7 +21,12 @@ function nav(spec: SiteSpec): string {
 function hero(spec: SiteSpec, theme: Theme): string {
   const c = spec.content;
   const img = spec.images[0];
-  const media =
+  // Full-bleed photo behind centered heroes; split heroes keep a side media panel.
+  const fullBleedPhoto =
+    theme.layout.hero === 'centered' && img
+      ? `<div class="sf-hero-media sf-hero-media--bleed" aria-hidden="true"><img src="${attr(img.src)}" alt="" loading="eager" width="1600" height="1000" /></div>`
+      : '';
+  const sideMedia =
     theme.layout.hero !== 'centered' && img
       ? `<div class="sf-hero-media"><img src="${attr(img.src)}" alt="${attr(img.alt || spec.business.name)}" loading="eager" width="800" height="600" /></div>`
       : '';
@@ -42,7 +47,8 @@ function hero(spec: SiteSpec, theme: Theme): string {
     theme.layout.hero === 'centered'
       ? `<div class="sf-hero-atmosphere" aria-hidden="true" data-initial="${attr(initial)}"></div>`
       : '';
-  return `<section class="sf-hero sf-hero--${theme.layout.hero}" id="home">
+  return `<section class="sf-hero sf-hero--${theme.layout.hero}${img && theme.layout.hero === 'centered' ? ' sf-hero--has-photo' : ''}" id="home">
+  ${fullBleedPhoto}
   ${atmosphere}
   <div class="sf-hero-body">
     ${eyebrow ? `<p class="sf-eyebrow">${esc(eyebrow)}</p>` : ''}
@@ -53,7 +59,7 @@ function hero(spec: SiteSpec, theme: Theme): string {
       <a class="sf-btn sf-btn--ghost" href="#about">Learn more</a>
     </div>
   </div>
-  ${media}
+  ${sideMedia}
 </section>`;
 }
 
@@ -87,8 +93,11 @@ function services(spec: SiteSpec, theme: Theme): string {
 }
 
 function gallery(spec: SiteSpec): string {
-  const imgs = spec.images.slice(1, 7);
-  if (imgs.length < 2) return '';
+  // Prefer images after the hero; if we only have one extra, still show a gallery.
+  // If the only images are the hero set, reuse from index 0 so demos aren't empty.
+  let imgs = spec.images.slice(1, 7);
+  if (imgs.length < 2) imgs = spec.images.slice(0, 6);
+  if (imgs.length < 1) return '';
   const tiles = imgs
     .map(
       (im) =>

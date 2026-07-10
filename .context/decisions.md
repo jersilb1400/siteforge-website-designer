@@ -183,3 +183,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** Operator dashboard and interview needed a memorable brand surface that matches the "forge" metaphor and impresses clients walking the interview.
 - **Decision:** Dark industrial forge system in `public/styles.css`: charcoal iron, molten ember, brass stamps; Syne + Figtree + IBM Plex Mono; floating island topbar; double-bezel cards; heat-rail progress; film grain. Applied to index, interview, how-to, favicon.
 - **Consequences:** Generated client sites keep their own themes (Haven etc.); only SiteForge's operator/client interview chrome uses this system.
+
+## ADR-0016 — Demo imagery via curated Unsplash packs (not AI generation)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Sales demos shipped text-only; prospects saw empty heroes/galleries. Workers AI FLUX is available but paid and slow for multi-image demos.
+- **Decision:** On `POST /api/demos`, fetch a curated industry photo pack from Unsplash CDN into R2 as confirmed assets before `generateBuild`. Centered heroes use full-bleed photo + scrim; gallery always renders when ≥1 image exists. Sanitize scraped taglines/hours; never use interview goals as service names.
+- **Consequences:** Demos look photographic without Anthropic/Workers AI image spend. Revisit FLUX generation if Jeremy approves paid image gen for bespoke client photos.

@@ -15,6 +15,7 @@ import {
   listDemoIndustries,
   type DemoBrief,
 } from '../generate/demo/catalog';
+import { ingestDemoPhotos } from '../generate/demo/ingest-photos';
 
 // Sales-demo API (operator-gated). Creates a real project seeded with synthetic
 // interview answers + confirmed catalog content, then runs the normal generate
@@ -94,6 +95,8 @@ demos.post('/', async (c) => {
 
   await batch(c.env, statements);
 
+  // Curated industry photos first (hero + gallery). Optional logo is additive.
+  const photoCount = await ingestDemoPhotos(c.env, projectId, seed.industry, businessName);
   if (brief.logoUrl?.trim()) {
     await ingestDemoLogo(c.env, projectId, brief.logoUrl.trim(), businessName);
   }
@@ -111,6 +114,7 @@ demos.post('/', async (c) => {
       previewUrl: result.previewUrl,
       siteUrl: `/site/${projectId}/`,
       quality: result.quality,
+      photoCount,
       demo: true,
     },
     201,

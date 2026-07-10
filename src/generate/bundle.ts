@@ -5,7 +5,7 @@ import { NotFound, BadRequest } from '../lib/errors';
 import { parseAnswers, buildProfile } from '../interview/engine';
 import { resolvePalette } from './palette';
 import { selectTheme, getTheme, themeExists } from './themes';
-import { generateContent, type ContentInputs } from './content';
+import { generateContent, type ContentInputs, cleanHours } from './content';
 import { renderSite } from './render';
 import { sectionsForPages, type SiteSpec, type SiteImage } from './spec';
 import { qualityCheck } from './quality';
@@ -130,7 +130,7 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
       email: profile.contact.email,
       phone: profile.contact.phone,
       address: profile.contact.address,
-      hours: profile.contact.hours || merged.hours || '',
+      hours: cleanHours(profile.contact.hours || merged.hours || ''),
       socials: {},
     },
     sections: sectionsForPages(profile.pages),

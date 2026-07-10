@@ -51,6 +51,15 @@ export const haven: Theme = {
            radial-gradient(85% 65% at 82% 108%, color-mix(in srgb,var(--haven-gold) 22%,transparent), transparent 60%),
            radial-gradient(120% 85% at 50% -12%, color-mix(in srgb,var(--brand) 38%,transparent), transparent 58%),
            linear-gradient(165deg, #10140c 0%, color-mix(in srgb,var(--brand) 46%,#10140c) 55%, #171b12 100%)}
+       /* Real photo under the cinematic wash when demo assets are present. */
+       .sf-hero--has-photo{background:transparent}
+       .sf-hero--has-photo.sf-hero--centered::after{background:
+         linear-gradient(180deg,rgba(12,16,10,.42) 0%,rgba(12,16,10,.62) 45%,rgba(12,16,10,.88) 100%),
+         radial-gradient(90% 70% at 50% 100%, color-mix(in srgb,var(--brand) 35%,transparent), transparent 55%)}
+       .sf-hero-media--bleed img{transform:scale(1.04);filter:saturate(1.05) contrast(1.05)}
+       .sf-gallery-grid{gap:1rem}
+       .sf-tile img{border-radius:calc(var(--r) + 4px);aspect-ratio:4/3;
+         box-shadow:0 18px 40px -28px rgba(0,0,0,.35)}
        .sf-hero-atmosphere{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
        .sf-hero-atmosphere::before{content:'';position:absolute;inset:-10%;
          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");

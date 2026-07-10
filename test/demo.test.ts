@@ -114,14 +114,34 @@ describe('demo content generation (no Anthropic)', () => {
     });
 
     expect(content.heroHeadline).toBe('Aura Day Spa');
-    expect(content.heroSub).toMatch(/Quiet luxury|calm retreat/i);
+    expect(content.heroSub).toMatch(/calm retreat/i);
     expect(content.heroCtaLabel).toBe('Book an appointment');
     expect(content.services.map((s) => s.name)).toContain('Signature Facial');
     expect(content.servicesTitle).toBe('Rituals & services');
     expect(content.highlights.length).toBeGreaterThan(0);
   });
 
-  it('renders a haven spa demo with brand-level h1 and no lorem', async () => {
+  it('never uses interview goals as service names', async () => {
+    const seed = getDemoSeed('Day spa / Salon')!;
+    const answers = buildDemoAnswers({ businessName: '21Edge', industry: 'Day spa / Salon' }, seed);
+    const profile = buildProfile(answers);
+    // Simulate a bad scrape path with no services — only goals available.
+    const content = await generateContent(env, {
+      profile,
+      confirmed: { demo: false, headings: ['Generate leads / inquiries', 'Take bookings or appointments'] },
+    });
+    expect(content.services.every((s) => !/generate leads|take bookings/i.test(s.name))).toBe(true);
+    expect(content.services[0]!.name).toMatch(/Facial|Massage|Hair|Nail|Core|Consult/i);
+  });
+
+  it('cleans pipe-junk taglines', async () => {
+    const { cleanCopy } = await import('../src/generate/content');
+    expect(cleanCopy('|Beauty with an edge| Cut sharp.')).toBe('Beauty with an edge · Cut sharp.');
+    expect(cleanCopy('21Edge, Winnsboro. 769 likes · 75 talking about this')).toMatch(/^21Edge/);
+    expect(cleanCopy('21Edge, Winnsboro. 769 likes · 75 talking about this')).not.toMatch(/likes/i);
+  });
+
+  it('renders a haven spa demo with brand-level h1, gallery hooks, and no lorem', async () => {
     const seed = getDemoSeed('Day spa / Salon')!;
     const answers = buildDemoAnswers({ businessName: 'Lumen Salon', industry: 'Day spa / Salon' }, seed);
     const profile = buildProfile(answers);
@@ -148,7 +168,11 @@ describe('demo content generation (no Anthropic)', () => {
       contact: { ...profile.contact, socials: {} },
       sections: sectionsForPages(profile.pages),
       palette,
-      images: [],
+      images: [
+        { src: 'media/0.jpg', alt: 'Spa room' },
+        { src: 'media/1.jpg', alt: 'Massage' },
+        { src: 'media/2.jpg', alt: 'Salon' },
+      ],
       content,
       generatedAt: new Date().toISOString(),
     };
@@ -157,8 +181,21 @@ describe('demo content generation (no Anthropic)', () => {
     expect(html).toContain('Lumen Salon');
     expect(html).toMatch(/<h1[^>]*>Lumen Salon<\/h1>/);
     expect(html).toContain('Signature Facial');
+    expect(html).toContain('sf-hero--has-photo');
+    expect(html).toContain('sf-hero-media--bleed');
+    expect(html).toContain('sf-gallery');
+    expect(html).toContain('media/0.jpg');
     expect(html.toLowerCase()).not.toContain('lorem ipsum');
-    expect(html).toContain('Cormorant'); // haven display font
-    expect(html).toContain('sf-haven-rise'); // motion keyframes
+    expect(html).toContain('Cormorant');
+    expect(html).toContain('sf-haven-rise');
+  });
+});
+
+describe('demo photo packs', () => {
+  it('provides spa photos for Day spa / Salon', async () => {
+    const { photosForIndustry } = await import('../src/generate/demo/photos');
+    const photos = photosForIndustry('Day spa / Salon');
+    expect(photos.length).toBeGreaterThanOrEqual(4);
+    expect(photos[0]!.url).toMatch(/^https:\/\/images\.unsplash\.com\//);
   });
 });
