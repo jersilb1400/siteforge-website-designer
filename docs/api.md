@@ -40,16 +40,17 @@ Liveness ping. No auth. Touches nothing.
 ```
 
 ### GET /api/ready
-Readiness. No auth. Actually exercises D1 (`SELECT 1`) and KV (a `get`), and checks
-that the Anthropic secret is present. Returns `200` when all checks pass, `503`
+Readiness. No auth. Exercises D1 (`SELECT 1`) and KV (a `get`), and checks that
+`ANTHROPIC_API_KEY` is present. Also reports `openrouter` (`ok` when
+`OPENROUTER_API_KEY` is set) but does **not** fail readiness when it is missing
+(Unsplash fallback still works). Returns `200` when required checks pass, `503`
 otherwise.
 
 ```json
-{ "ok": true, "checks": { "d1": "ok", "kv": "ok", "anthropic": "ok" } }
+{ "ok": true, "checks": { "d1": "ok", "kv": "ok", "anthropic": "ok", "openrouter": "ok" } }
 ```
 
-Each check is `"ok"` or `"error"`; `anthropic` is `"error"` when `ANTHROPIC_API_KEY`
-is unset.
+Each check is `"ok"` or `"error"`.
 
 ---
 
@@ -319,6 +320,9 @@ Request body:
 
 - `businessName` and `industry` are required (`400` if missing/unknown).
 - Optional `logoUrl` is fetched, stored in R2, and auto-confirmed as a logo asset.
+- Photos: OpenRouter FLUX.2 Klein 4B gap-fills to ~6 images when
+  `OPENROUTER_API_KEY` is set; otherwise Unsplash industry packs. Client uploads
+  always win over AI/stock.
 - Project is named `Demo — {businessName}` and appears in the normal project list.
 
 Response `201`:
@@ -333,6 +337,8 @@ Response `201`:
   "previewUrl": "/preview/build_…/",
   "siteUrl": "/site/proj_…/",
   "quality": { "score": 100, "pass": true },
+  "photoCount": 6,
+  "photos": { "generated": 6, "stock": 0, "total": 6, "costUsd": 0.08, "source": "openrouter" },
   "demo": true
 }
 ```

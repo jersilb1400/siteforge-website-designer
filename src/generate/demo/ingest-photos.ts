@@ -21,10 +21,13 @@ export async function ingestDemoPhotos(
   projectId: string,
   industry: string,
   businessName: string,
+  maxCount?: number,
 ): Promise<number> {
   const photos = photosForIndustry(industry);
+  const limit = maxCount ?? photos.length;
   let saved = 0;
   for (const photo of photos) {
+    if (saved >= limit) break;
     const ok = await putConfirmedImage(env, projectId, photo, businessName);
     if (ok) saved++;
   }

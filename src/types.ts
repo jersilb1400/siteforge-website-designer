@@ -29,6 +29,8 @@ export interface Env {
   ENVIRONMENT: string;
   ANTHROPIC_MODEL_SMART: string;
   ANTHROPIC_MODEL_CHEAP: string;
+  // OpenRouter image model slug (non-secret). Default: FLUX.2 Klein 4B.
+  OPENROUTER_IMAGE_MODEL?: string;
   // 'true' to route scraping through Browser Rendering (requires paid plan +
   // renderWithBrowser implemented); anything else uses the fetch fallback.
   USE_BROWSER_RENDERING?: string;
@@ -36,6 +38,7 @@ export interface Env {
   // Secrets (wrangler secret put / .dev.vars).
   ANTHROPIC_API_KEY?: string;
   OPERATOR_TOKEN?: string;
+  OPENROUTER_API_KEY?: string;
 }
 
 // Hono variable map — values middleware attaches to the request context.

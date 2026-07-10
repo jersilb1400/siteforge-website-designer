@@ -21,10 +21,11 @@ Entry point: `src/index.ts`. Binding shape: `src/types.ts` (`Env`). Config:
 | `AI` | Workers AI | Cheap classification fallback (Phase 2+). Optional in `Env`. | `[ai]` |
 | `BROWSER` | Browser Rendering | Renders/extracts existing client sites during ingestion (Phase 2). Optional in `Env`. | `[browser]` |
 
-Secrets (not bindings): `ANTHROPIC_API_KEY` and `OPERATOR_TOKEN`, set via
+Secrets (not bindings): `ANTHROPIC_API_KEY`, `OPERATOR_TOKEN`, and optional
+`OPENROUTER_API_KEY` (AI site photography via FLUX.2 Klein 4B), set via
 `wrangler secret put` / `.dev.vars` — never in `wrangler.toml`. Non-secret vars
-`ENVIRONMENT`, `ANTHROPIC_MODEL_SMART`, `ANTHROPIC_MODEL_CHEAP` live in
-`[vars]`.
+`ENVIRONMENT`, `ANTHROPIC_MODEL_SMART`, `ANTHROPIC_MODEL_CHEAP`,
+`OPENROUTER_IMAGE_MODEL` live in `[vars]`.
 
 > Binding IDs in `wrangler.toml` are placeholders (`PLACEHOLDER_D1_DATABASE_ID`
 > etc.) until provisioned under a real Cloudflare login. See `decisions.md`.

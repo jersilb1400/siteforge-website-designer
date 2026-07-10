@@ -10,6 +10,7 @@ import { renderSite } from './render';
 import { sectionsForPages, type SiteSpec, type SiteImage } from './spec';
 import { qualityCheckBundle } from './quality';
 import { deriveDesign } from './design-director';
+import { ensureProjectPhotos } from './images/generate-assets';
 
 // Orchestrates a build: interview profile + CONFIRMED source content -> spec ->
 // rendered, self-contained bundle in R2 -> versioned `builds` row. Spec assembly
@@ -156,13 +157,18 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
       r2_key: string;
       alt_text: string | null;
       kind: string;
+      source_url: string | null;
     }>(
       env,
-      `SELECT id, r2_key, alt_text, kind FROM assets
+      `SELECT id, r2_key, alt_text, kind, source_url FROM assets
         WHERE project_id = ? AND review_status IN ('confirmed','edited')
         ORDER BY
           CASE WHEN kind = 'logo' THEN 0 ELSE 1 END,
-          CASE WHEN r2_key LIKE '%/uploads/%' OR r2_key LIKE '%/logo/%' THEN 0 ELSE 1 END,
+          CASE
+            WHEN r2_key LIKE '%/uploads/%' OR r2_key LIKE '%/logo/%' THEN 0
+            WHEN r2_key LIKE '%/generated/%' OR IFNULL(source_url,'') LIKE 'openrouter:%' THEN 1
+            ELSE 2
+          END,
           created_at ASC
         LIMIT 16`,
       projectId,
@@ -239,6 +245,19 @@ async function reserveBuild(env: Env, projectId: string, buildId: string): Promi
 export async function generateBuild(env: Env, projectId: string, themeOverride?: string): Promise<BuildResult> {
   await requireProject(env, projectId);
   const spec = await assembleSpec(env, projectId, themeOverride);
+  // Gap-fill AI / stock photos when the project lacks enough confirmed images.
+  await ensureProjectPhotos(
+    env,
+    projectId,
+    {
+      businessName: spec.business.name,
+      industry: spec.business.industry,
+      tone: spec.business.tone,
+      themeId: spec.themeId,
+      tagline: spec.business.tagline,
+    },
+    { target: 6, allowStockFallback: true },
+  );
   return finalizeBuild(env, projectId, spec);
 }
 

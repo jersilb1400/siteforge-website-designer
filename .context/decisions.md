@@ -186,10 +186,17 @@ Number, Title, Status, Context, Decision, Consequences.
 
 ## ADR-0016 — Demo imagery via curated Unsplash packs (not AI generation)
 
-- **Status:** Accepted (2026-07-09)
+- **Status:** Superseded by ADR-0019 (2026-07-09)
 - **Context:** Sales demos shipped text-only; prospects saw empty heroes/galleries. Workers AI FLUX is available but paid and slow for multi-image demos.
 - **Decision:** On `POST /api/demos`, fetch a curated industry photo pack from Unsplash CDN into R2 as confirmed assets before `generateBuild`. Centered heroes use full-bleed photo + scrim; gallery always renders when ≥1 image exists. Sanitize scraped taglines/hours; never use interview goals as service names.
 - **Consequences:** Demos look photographic without Anthropic/Workers AI image spend. Revisit FLUX generation if Jeremy approves paid image gen for bespoke client photos.
+
+## ADR-0019 — OpenRouter FLUX.2 Klein 4B for site photography
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Stock Unsplash packs are generic; client uploads are best but often missing. Need AI imagery that matches industry/theme without Max/Pro FLUX spend.
+- **Decision:** Gap-fill confirmed photos via OpenRouter `black-forest-labs/flux.2-klein-4b` (`POST /api/v1/images`) when a project has fewer than 6 photos. Priority: uploads → scrapes → OpenRouter → Unsplash fallback. Cap 8 generated images per ensure pass. Secret: `OPENROUTER_API_KEY`; model var: `OPENROUTER_IMAGE_MODEL`.
+- **Consequences:** ~$0.08–0.12 per 6-image demo at 1K. Builds never block on OpenRouter failure. Logos remain upload-only.
 
 ## ADR-0017 — Multi-page static sites + project delete
 

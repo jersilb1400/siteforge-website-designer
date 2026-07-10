@@ -8,6 +8,10 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxx
 # ANTHROPIC_MODEL_SMART=claude-sonnet-5
 # ANTHROPIC_MODEL_CHEAP=claude-haiku-4-5-20251001
 
+# OpenRouter — AI site imagery (FLUX.2 Klein 4B). Optional; Unsplash fills gaps when unset.
+OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxxxxxxxxxxxxxx
+# OPENROUTER_IMAGE_MODEL=black-forest-labs/flux.2-klein-4b
+
 # Shared secret gating the operator dashboard/API for v1 (single operator).
 # Replace with Cloudflare Access in a later phase.
 OPERATOR_TOKEN=change-me-to-a-long-random-string

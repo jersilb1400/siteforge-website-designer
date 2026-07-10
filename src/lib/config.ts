@@ -11,6 +11,11 @@ export function models(env: Env) {
   };
 }
 
+/** OpenRouter image model — cheapest high-quality FLUX.2 tier by default. */
+export function imageModel(env: Env): string {
+  return env.OPENROUTER_IMAGE_MODEL || 'black-forest-labs/flux.2-klein-4b';
+}
+
 export function isProduction(env: Env): boolean {
   return env.ENVIRONMENT === 'production';
 }

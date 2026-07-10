@@ -65,6 +65,8 @@ ENVIRONMENT = "production"
 # Non-secret model routing defaults; override per-environment as needed.
 ANTHROPIC_MODEL_SMART = "claude-sonnet-5"
 ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001"
+# OpenRouter image generation (FLUX.2 Klein 4B — cheapest high-quality FLUX tier).
+OPENROUTER_IMAGE_MODEL = "black-forest-labs/flux.2-klein-4b"
 # Scraping uses a plain-fetch renderer by default. Flip to "true" only after
 # wiring Browser Rendering (renderWithBrowser + paid plan). See src/ingest/render.ts.
 USE_BROWSER_RENDERING = "false"
@@ -72,4 +74,4 @@ USE_BROWSER_RENDERING = "false"
 # Production environment overrides. Deploy with: wrangler deploy --env production
 [env.production]
 name = "siteforge-production"
-vars = { ENVIRONMENT = "production", ANTHROPIC_MODEL_SMART = "claude-sonnet-5", ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001" }
+vars = { ENVIRONMENT = "production", ANTHROPIC_MODEL_SMART = "claude-sonnet-5", ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001", OPENROUTER_IMAGE_MODEL = "black-forest-labs/flux.2-klein-4b" }
