@@ -176,3 +176,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** `context-architect` is installed; `.context/` already existed in SiteForge layout.
 - **Decision:** Keep existing `.context/*` files; add VERIFY.md for task checks; append ADRs rather than renaming the whole tree to CONTEXT.md/DECISIONS.md.
 - **Consequences:** Dual naming (mission.md vs CONTEXT.md) is fine; VERIFY.md is the live check index.
+
+## ADR-0015 — SiteForge product UI: Blacksmith Forge theme
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Operator dashboard and interview needed a memorable brand surface that matches the "forge" metaphor and impresses clients walking the interview.
+- **Decision:** Dark industrial forge system in `public/styles.css`: charcoal iron, molten ember, brass stamps; Syne + Figtree + IBM Plex Mono; floating island topbar; double-bezel cards; heat-rail progress; film grain. Applied to index, interview, how-to, favicon.
+- **Consequences:** Generated client sites keep their own themes (Haven etc.); only SiteForge's operator/client interview chrome uses this system.

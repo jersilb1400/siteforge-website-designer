@@ -3,55 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SiteForge — Operator</title>
-  <meta name="description" content="SiteForge operator dashboard: forge and deploy client websites." />
+  <title>SiteForge — The Workshop</title>
+  <meta name="description" content="SiteForge operator workshop: forge and deploy client websites." />
   <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0b0a09" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="wrap">
       <div class="brand"><span class="mark">SF</span> SiteForge</div>
-      <button id="signout" class="btn ghost hidden" style="padding:0.4rem 0.8rem;font-size:0.85rem;">Sign out</button>
+      <button id="signout" class="btn ghost hidden" style="padding:0.45rem 0.95rem;font-size:0.82rem;">Sign out</button>
     </div>
   </header>
 
-  <main class="wrap" style="padding-top: 2.5rem; padding-bottom: 3rem;">
+  <main class="wrap" style="padding-top: 2.75rem; padding-bottom: 3.5rem;">
 
     <!-- gate -->
-    <section id="gate" class="hidden" style="max-width: 440px; margin: 3rem auto;">
+    <section id="gate" class="hidden rise" style="max-width: 460px; margin: 3.5rem auto;">
       <div class="eyebrow">operator access</div>
-      <h1 style="margin:0.6rem 0 0.5rem;">The forge is locked.</h1>
-      <p class="muted">Enter your operator token to manage client projects.</p>
-      <div class="card stack" style="margin-top:1.25rem;">
+      <h1 style="margin:0.75rem 0 0.55rem;">The forge is locked.</h1>
+      <p class="muted" style="max-width:36ch;">Enter your operator token to open the workshop and manage client projects.</p>
+      <div class="card stack" style="margin-top:1.5rem;">
         <label class="field">
           <span class="lbl">Operator token</span>
-          <input type="password" id="token" placeholder="OPERATOR_TOKEN" autocomplete="off" />
+          <input type="password" id="token" placeholder="Strike the anvil…" autocomplete="off" />
         </label>
         <p id="gate-err" class="error" role="alert"></p>
-        <button id="unlock" class="btn primary">Unlock</button>
+        <button id="unlock" class="btn primary">Unlock the forge</button>
       </div>
     </section>
 
     <!-- app -->
     <section id="app" class="hidden">
-      <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:1.5rem;">
+      <div class="row rise" style="justify-content:space-between;align-items:flex-end;margin-bottom:1.75rem;">
         <div>
           <div class="eyebrow">workshop</div>
-          <h1 style="margin-top:0.5rem;">Projects</h1>
+          <h1 style="margin-top:0.55rem;">On the anvil</h1>
+          <p class="muted" style="margin:0.5rem 0 0;max-width:42ch;">Projects, demos, and live previews — forged here, shipped to clients.</p>
         </div>
-        <div class="row" style="gap:0.5rem;">
-          <button id="demo-btn" class="btn">Create demo</button>
+        <div class="row" style="gap:0.55rem;">
+          <button id="demo-btn" class="btn ghost">Create demo</button>
           <button id="new-btn" class="btn primary">+ New project</button>
         </div>
       </div>
 
       <!-- new project form -->
-      <div id="new-form" class="card stack hidden" style="margin-bottom:1.5rem;">
+      <div id="new-form" class="card stack hidden rise" style="margin-bottom:1.5rem;">
         <h2>Start a project</h2>
         <label class="field">
           <span class="lbl">Client / organization name</span>
@@ -63,19 +65,19 @@
         </label>
         <label class="field">
           <span class="lbl">Project name <span class="muted">(optional)</span></span>
-          <input type="text" id="projectName" placeholder="Defaults to “<client> website”" />
+          <input type="text" id="projectName" placeholder="Defaults to “&lt;client&gt; website”" />
         </label>
         <p id="new-err" class="error" role="alert"></p>
         <div class="row">
-          <button id="create" class="btn primary">Create & get interview link</button>
+          <button id="create" class="btn primary">Create &amp; get interview link</button>
           <button id="cancel-new" class="btn ghost">Cancel</button>
         </div>
       </div>
 
       <!-- sales demo form -->
-      <div id="demo-form" class="card stack hidden" style="margin-bottom:1.5rem;">
-        <h2>Create a sales demo</h2>
-        <p class="muted" style="margin:0;">Build a polished sample site from a short brief — no interview required. Great for pitching prospects.</p>
+      <div id="demo-form" class="card stack hidden rise" style="margin-bottom:1.5rem;">
+        <h2>Forge a sales demo</h2>
+        <p class="muted" style="margin:0;">A polished sample site from a short brief — no interview required. Built to impress a prospect.</p>
         <label class="field">
           <span class="lbl">Business name</span>
           <input type="text" id="demoName" placeholder="e.g. Aura Day Spa" />
@@ -112,7 +114,7 @@
         </label>
         <p id="demo-err" class="error" role="alert"></p>
         <div class="row">
-          <button id="create-demo" class="btn primary">Forge demo preview</button>
+          <button id="create-demo" class="btn primary">Strike — forge preview</button>
           <button id="cancel-demo" class="btn ghost">Cancel</button>
         </div>
       </div>
@@ -124,7 +126,7 @@
     </section>
   </main>
 
-  <footer class="foot"><div class="wrap">SiteForge · operator dashboard · v0.1</div></footer>
+  <footer class="foot"><div class="wrap">SiteForge · blacksmith workshop · forged on Cloudflare</div></footer>
 
   <script src="/app.js"></script>
 </body>
