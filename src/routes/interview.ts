@@ -6,10 +6,10 @@ import { BadRequest, NotFound } from '../lib/errors';
 import {
   parseAnswers,
   nextQuestion,
-  progress,
   resolveOptions,
   maybeFollowUp,
   buildProfile,
+  computeInterviewState,
 } from '../interview/engine';
 import { questionById, type Question } from '../interview/questions';
 
@@ -63,19 +63,26 @@ async function presentQuestion(env: Env, q: Question, answers: Record<string, un
   };
 }
 
+// Build the full client-facing state: sessionId + the pure engine state
+// (progress/complete/canGoBack/isLast) + the resolved next question, if any.
+async function buildResponse(env: Env, session: SessionRow, answers: Record<string, unknown>) {
+  const state = computeInterviewState(answers, session.status);
+  return {
+    sessionId: session.id,
+    status: state.status,
+    progress: state.progress,
+    complete: state.complete,
+    canGoBack: state.canGoBack,
+    isLast: state.isLast,
+    question: state.question ? await presentQuestion(env, state.question, answers) : null,
+  };
+}
+
 // Current interview state: progress + the next question to ask (or done).
 interview.get('/:sessionId', async (c) => {
   const session = await loadSession(c, c.req.param('sessionId'));
   const answers = await loadAnswers(c.env, session.id);
-  const q = nextQuestion(answers);
-
-  return c.json({
-    sessionId: session.id,
-    status: q ? session.status : 'complete',
-    progress: progress(answers),
-    complete: q === null,
-    question: q ? await presentQuestion(c.env, q, answers) : null,
-  });
+  return c.json(await buildResponse(c.env, session, answers));
 });
 
 // Submit an answer, persist it (upsert), advance, return the next question.
@@ -167,10 +174,56 @@ interview.post('/:sessionId/answer', async (c) => {
   return c.json({
     saved: true,
     followUp,
-    progress: progress(answers),
-    complete: next === null,
-    question: next ? await presentQuestion(c.env, next, answers) : null,
+    ...(await buildResponse(c.env, session, answers)),
   });
+});
+
+// Undo the most recent answer and step back to that question. Used by the
+// client's Back button — it does not "unskip" anything, it just removes the
+// latest answer row and lets the deterministic engine recompute the next
+// (now-unanswered) question from what remains.
+interview.post('/:sessionId/back', async (c) => {
+  const session = await loadSession(c, c.req.param('sessionId'));
+
+  const last = await one<{ id: string }>(
+    c.env,
+    'SELECT id FROM interview_answers WHERE session_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1',
+    session.id,
+  );
+  if (!last) throw new BadRequest('Nothing to go back to.');
+
+  await run(c.env, 'DELETE FROM interview_answers WHERE id = ?', last.id);
+
+  if (session.status === 'complete') {
+    await run(
+      c.env,
+      `UPDATE interview_sessions SET status='active',
+              updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
+      session.id,
+    );
+    // Step the project back out of ingestion — but only if nothing downstream
+    // has actually started yet, so we never clobber real ingestion/build progress.
+    await run(
+      c.env,
+      `UPDATE projects SET status='interview',
+              updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ? AND status = 'ingesting'`,
+      session.project_id,
+    );
+    session.status = 'active';
+  }
+
+  const answers = await loadAnswers(c.env, session.id);
+  const next = nextQuestion(answers);
+  await run(
+    c.env,
+    `UPDATE interview_sessions SET next_question_id = ?, phase = ?,
+            updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`,
+    next?.id ?? null,
+    next?.phase ?? session.phase,
+    session.id,
+  );
+
+  return c.json(await buildResponse(c.env, session, answers));
 });
 
 // The structured profile — the Phase 1 deliverable. Available once complete,

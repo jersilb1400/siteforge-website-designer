@@ -123,6 +123,8 @@ Current interview state: progress plus the next question to ask (or completion).
   "status": "active",
   "progress": { "answered": 3, "total": 18 },
   "complete": false,
+  "canGoBack": true,
+  "isLast": false,
   "question": {
     "id": "story", "phase": "basics", "text": "Tell the story…", "help": "…",
     "type": "longtext", "options": null, "placeholder": null, "required": true,
@@ -135,6 +137,13 @@ When the interview is finished, `complete` is `true`, `status` is `"complete"`, 
 `question` is `null`. For the `pages` question, `options` is resolved dynamically
 (industry-aware, via the cheap model, falling back to static defaults) and
 `defaultValue` pre-selects the suggested pages.
+
+- `canGoBack` — `true` once at least one answer has been recorded for this
+  session (i.e. there's something for `POST /back` to undo). `false` on the
+  first question, so the client can hide/disable its Back button with no error.
+- `isLast` — `true` when the returned `question` is the only visible question
+  left to answer; the client uses this to label its primary button **Finish**
+  instead of **Continue**.
 
 ### POST /api/interview/:sessionId/answer
 Submit an answer, persist it (upsert on `session_id + question_id`), advance, and
@@ -157,8 +166,12 @@ Response `200`:
 {
   "saved": true,
   "followUp": null,
+  "sessionId": "sess_…",
+  "status": "active",
   "progress": { "answered": 4, "total": 18 },
   "complete": false,
+  "canGoBack": true,
+  "isLast": false,
   "question": { "id": "goals", "phase": "goals", "…": "…" }
 }
 ```
@@ -169,6 +182,35 @@ Response `200`:
 - Answering the **last** question sets `complete: true`, `question: null`, flips the
   session to `complete`, and advances the project from `interview` to `ingesting`
   (caching `industry` and `tone` onto the project).
+
+### POST /api/interview/:sessionId/back
+Undo the most recently answered question and step back to it — the client's Back
+button. No request body.
+
+- Deletes the most-recently-updated `interview_answers` row for the session
+  (`ORDER BY updated_at DESC LIMIT 1`).
+- `400 bad_request` ("Nothing to go back to.") if the session has no answers yet
+  (i.e. `canGoBack` was `false`).
+- If the session was `complete`, it's reopened to `active` (and the project is
+  stepped back from `ingesting` to `interview`, but only if nothing beyond the
+  interview has started).
+- Recomputes the next question from the remaining answers and updates the
+  session's `next_question_id`/`phase` accordingly.
+
+Response `200` — same shape as `GET /api/interview/:sessionId`, with `question`
+set to the one whose answer was just removed:
+
+```json
+{
+  "sessionId": "sess_…",
+  "status": "active",
+  "progress": { "answered": 3, "total": 18 },
+  "complete": false,
+  "canGoBack": true,
+  "isLast": false,
+  "question": { "id": "story", "phase": "basics", "…": "…" }
+}
+```
 
 ### GET /api/interview/:sessionId/profile
 The structured `SiteProfile` — the Phase 1 deliverable. Readable any time (partial

@@ -56,6 +56,11 @@ function servicesTitleFor(industry: string, override?: string): string {
   return 'What we do';
 }
 
+function ctaTitleFor(industry: string, name: string): string {
+  if (industry === 'Day spa / Salon') return `Reserve your time at ${name}`;
+  return `Ready to connect with ${name}?`;
+}
+
 // --- deterministic fallback -------------------------------------------------
 function deterministic(inputs: ContentInputs): GeneratedContent {
   const { profile, confirmed } = inputs;
@@ -82,10 +87,13 @@ function deterministic(inputs: ContentInputs): GeneratedContent {
   }
 
   // Sales demos and spa sites lead with the brand name (hero-level signal).
+  // The tagline already surfaces as the hero eyebrow in that case (see
+  // sections.ts), so heroSub must carry different information — the first
+  // sentence of the real story — or the hero repeats itself.
   const brandFirst = confirmed.demo || profile.business.industry === 'Day spa / Salon';
   const heroHeadline = brandFirst ? name : profile.business.tagline || firstSentence;
   const heroSub = brandFirst
-    ? profile.business.tagline || firstSentence
+    ? firstSentence
     : profile.business.tagline
       ? firstSentence
       : `${name} — ${profile.business.industry || 'here for you'}.`;
@@ -100,7 +108,7 @@ function deterministic(inputs: ContentInputs): GeneratedContent {
     servicesTitle: servicesTitleFor(profile.business.industry, confirmed.servicesTitle),
     services,
     highlights: confirmed.highlights?.length ? confirmed.highlights : [],
-    ctaTitle: `Ready to connect with ${name}?`,
+    ctaTitle: ctaTitleFor(profile.business.industry, name),
     ctaBody: profile.contact.address
       ? `Visit us at ${profile.contact.address} or reach out any time.`
       : 'Reach out and we will get right back to you.',
@@ -161,10 +169,12 @@ export async function generateContent(env: Env, inputs: ContentInputs): Promise<
       services: Array.isArray(out.services) && out.services.length ? out.services : fallback.services,
       highlights: Array.isArray(out.highlights) && out.highlights.length ? out.highlights : fallback.highlights,
     };
-    // Enforce brand-first hero for demos / spa even if the model drifts.
+    // Enforce brand-first hero for demos / spa even if the model drifts. The
+    // tagline already renders as the hero eyebrow, so fall back to the
+    // (non-tagline) deterministic sub rather than repeating it.
     if (confirmed.demo || profile.business.industry === 'Day spa / Salon') {
       merged.heroHeadline = profile.business.name;
-      if (!merged.heroSub) merged.heroSub = profile.business.tagline || fallback.heroSub;
+      if (!merged.heroSub || merged.heroSub === profile.business.tagline) merged.heroSub = fallback.heroSub;
     }
     return merged;
   } catch {

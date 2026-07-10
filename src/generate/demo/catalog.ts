@@ -48,21 +48,21 @@ const SPA: DemoIndustrySeed = {
   tone: 'Warm',
   goals: ['Take bookings or appointments', 'Share information & build trust', 'Generate leads / inquiries'],
   pages: pagesForIndustry('Day spa / Salon'),
-  defaultTagline: 'Rest, restore, renew',
+  defaultTagline: 'Quiet luxury, unhurried care',
   defaultAbout:
-    'A calm retreat for skin, hair, and body. We pair skilled therapists with quiet rooms and thoughtfully chosen products so every visit feels unhurried.',
+    'A calm retreat for skin, hair, and body. We pair skilled therapists with quiet, softly lit rooms and thoughtfully chosen products so every visit feels slower than the rest of your day.',
   hours: 'Tue–Sat 9:00–19:00 · Sun by appointment',
   servicesTitle: 'Rituals & services',
   services: [
-    { name: 'Signature Facial', desc: 'Custom cleanse, extract, and glow tailored to your skin.' },
-    { name: 'Hot Stone Massage', desc: 'Warm basalt stones and deep pressure to release tension.' },
-    { name: 'Hair Color & Cut', desc: 'Precision cuts and dimensional color from our salon team.' },
-    { name: 'Nail Rituals', desc: 'Manicure and pedicure with lasting polish and hand care.' },
-    { name: 'Bridal Package', desc: 'Hair, makeup, and calming prep for you and your party.' },
+    { name: 'Signature Facial', desc: 'A custom cleanse, gentle extraction, and lit-from-within glow, tailored to your skin.' },
+    { name: 'Hot Stone Massage', desc: 'Warm basalt stones and unhurried pressure that melt tension from the inside out.' },
+    { name: 'Hair Color & Cut', desc: 'Precision cuts and dimensional color, shaped around how you actually wear your hair.' },
+    { name: 'Nail Rituals', desc: 'A slow manicure and pedicure ritual with lasting polish and real hand and foot care.' },
+    { name: 'Bridal Package', desc: 'Hair, makeup, and calm preparation for you and your whole party, timed to the day.' },
   ],
   highlights: ['Licensed therapists', 'Quiet private suites', 'Clean beauty products'],
   ctaLabel: 'Book an appointment',
-  brandColors: '#4A5D4E #C4A484',
+  brandColors: '#3E5245 #A9824F',
 };
 
 const SEEDS: DemoIndustrySeed[] = [

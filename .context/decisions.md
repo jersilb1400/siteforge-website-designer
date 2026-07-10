@@ -135,3 +135,44 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Consequences:** Project knowledge is captured in files under version control
   instead of skill-managed structure. If those skills later become available,
   reconcile this layer with their conventions.
+
+## ADR-0012 — Interview Back + Finish UX
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Clients need to correct prior answers; completion felt abrupt with no Finish/Done CTA.
+- **Decision:** Add `POST /api/interview/:sessionId/back` (remove most-recent answer, re-present that question). Client shows Back when history exists; last-step CTA is Finish; completion screen has an explicit Done acknowledgment.
+- **Consequences:** Session can leave `complete` if user backs from a finished state only via operator reset later — Back is only available while `active` or by un-completing when deleting the last answer. Prefer: Back while active; on complete screen, Done closes the loop without mutating.
+
+## ADR-0013 — Premium demo design bar (Editorial Luxury)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** First spa demos were too simple to pitch prospects. Installed high-end-visual-design, ui-ux-pro-max, impeccable skills.
+- **Decision:** Haven (and demo-facing themes) target Editorial Luxury: brand-first full-bleed/centered hero, film-grain atmosphere, nested service treatments, springy motion, no Inter/Roboto as display. Still semantic HTML + inline CSS (no heavy client frameworks) for Lighthouse 90+.
+- **Consequences:** Richer CSS in themes; section HTML may gain optional demo-friendly hooks (e.g. atmosphere wrappers) without breaking existing themes.
+## ADR-0010 — Sales demos as real projects
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Operators need fast prospect pitches without a full interview.
+- **Decision:** `POST /api/demos` creates a real client/project named `Demo — {name}`, seeds interview answers + confirmed catalog `source_content`, then runs `generateBuild`.
+- **Consequences:** Demos appear in the dashboard with revise/publish; Day spa / Salon + Haven theme added.
+
+## ADR-0012 — Interview Back + Finish UX
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Clients need to correct prior answers; completion felt abrupt with no Finish/Done CTA.
+- **Decision:** Add `POST /api/interview/:sessionId/back` (delete most-recent answer by updated_at, re-present that question; if session was complete, set status back to active). Client shows Back when answers exist; last unanswered question's primary CTA is Finish; completion screen has explicit Done.
+- **Consequences:** Back can un-complete a session so the client can revise.
+
+## ADR-0013 — Premium demo design bar (Editorial Luxury)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** First spa demos were too simple to pitch. Installed high-end-visual-design, ui-ux-pro-max, impeccable (+ existing frontend-design).
+- **Decision:** Haven targets Editorial Luxury: brand-first hero, grain atmosphere, nested service shells, springy motion; still semantic HTML + inline CSS for Lighthouse 90+.
+- **Consequences:** Richer theme CSS; optional section hooks for atmosphere without breaking other themes.
+
+## ADR-0014 — context-architect now available
+
+- **Status:** Accepted (2026-07-09) — supersedes the "missing skill" part of ADR-0009
+- **Context:** `context-architect` is installed; `.context/` already existed in SiteForge layout.
+- **Decision:** Keep existing `.context/*` files; add VERIFY.md for task checks; append ADRs rather than renaming the whole tree to CONTEXT.md/DECISIONS.md.
+- **Consequences:** Dual naming (mission.md vs CONTEXT.md) is fine; VERIFY.md is the live check index.

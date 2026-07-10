@@ -33,7 +33,17 @@ function hero(spec: SiteSpec, theme: Theme): string {
     : spec.business.tagline
       ? spec.business.industry
       : '';
+  // Centered-hero themes may opt into a full-bleed atmosphere layer (grain +
+  // layered gradients + a faint oversized initial as a brand mark) purely via
+  // CSS. Themes that don't style `.sf-hero-atmosphere` render an inert, empty,
+  // aria-hidden div — no visual change.
+  const initial = spec.business.name.trim().charAt(0).toUpperCase();
+  const atmosphere =
+    theme.layout.hero === 'centered'
+      ? `<div class="sf-hero-atmosphere" aria-hidden="true" data-initial="${attr(initial)}"></div>`
+      : '';
   return `<section class="sf-hero sf-hero--${theme.layout.hero}" id="home">
+  ${atmosphere}
   <div class="sf-hero-body">
     ${eyebrow ? `<p class="sf-eyebrow">${esc(eyebrow)}</p>` : ''}
     <h1 class="sf-hero-title">${esc(c.heroHeadline)}</h1>
@@ -62,9 +72,12 @@ function about(spec: SiteSpec): string {
 function services(spec: SiteSpec, theme: Theme): string {
   const c = spec.content;
   if (!c.services.length) return '';
+  // Inner wrapper enables a "double-bezel" nested treatment in themes that
+  // style `.sf-service-inner` (e.g. haven); it's an unstyled no-op elsewhere.
   const items = c.services
     .map(
-      (s) => `<article class="sf-service"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></article>`,
+      (s) =>
+        `<article class="sf-service"><div class="sf-service-inner"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div></article>`,
     )
     .join('');
   return `<section class="sf-section sf-services sf-services--${theme.layout.services}" id="services">
@@ -88,7 +101,7 @@ function gallery(spec: SiteSpec): string {
 </section>`;
 }
 
-function contact(spec: SiteSpec): string {
+function contact(spec: SiteSpec, theme: Theme): string {
   const ct = spec.contact;
   const rows: string[] = [];
   if (ct.address) rows.push(`<div class="sf-contact-row"><span>Visit</span><p>${esc(ct.address)}</p></div>`);
@@ -98,9 +111,17 @@ function contact(spec: SiteSpec): string {
   const socials = Object.entries(ct.socials || {})
     .map(([k, v]) => `<a href="${attr(safeHref(v))}" rel="noopener">${esc(k)}</a>`)
     .join('');
+  // Booking-forward themes (haven) get a second, prominent CTA button right
+  // where the visitor is about to leave — a plain lead paragraph isn't enough
+  // for a spa that lives and dies by bookings.
+  const repeatCta =
+    theme.id === 'haven'
+      ? `<div class="sf-contact-cta"><a class="sf-btn sf-btn--primary" href="${attr(safeHref(spec.content.heroCtaHref))}">${esc(spec.content.heroCtaLabel)}</a></div>`
+      : '';
   return `<section class="sf-section sf-contact" id="contact">
   <div class="sf-section-head"><span class="sf-eyebrow">Contact</span><h2>${esc(spec.content.ctaTitle)}</h2></div>
   <p class="sf-contact-lead">${esc(spec.content.ctaBody)}</p>
+  ${repeatCta}
   <div class="sf-contact-grid">${rows.join('')}</div>
   ${socials ? `<div class="sf-socials">${socials}</div>` : ''}
 </section>`;
@@ -147,7 +168,7 @@ export function renderBody(spec: SiteSpec, theme: Theme): string {
     about: () => about(spec),
     services: () => services(spec, theme),
     gallery: () => gallery(spec),
-    contact: () => contact(spec),
+    contact: () => contact(spec, theme),
   };
   const rendered = new Set<string>();
   const parts = [nav(spec), '<main id="main">'];
