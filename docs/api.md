@@ -107,6 +107,20 @@ and an interview progress snapshot. `404 not_found` if the project doesn't exist
 
 `session` and `interviewProgress` are `null` if no session exists yet.
 
+### DELETE /api/projects/:id
+Permanently delete a project (including sales demos). Removes R2 objects under
+`builds/{buildId}/` and `projects/{projectId}/`, then deletes the D1 project row
+(CASCADE clears sessions, answers, source_content, assets, builds, job_log). If
+the client has no remaining projects, the client row is removed too.
+
+Response `200`:
+
+```json
+{ "ok": true, "deleted": { "projectId": "proj_…", "name": "…", "r2Objects": 12, "clientDeleted": true } }
+```
+
+`404 not_found` if the project doesn't exist.
+
 ---
 
 ## Interview (session-id gated)

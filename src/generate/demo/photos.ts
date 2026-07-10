@@ -33,6 +33,22 @@ const SPA: DemoPhoto[] = [
     url: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1400&q=80',
     alt: 'Spa reception with natural materials',
   },
+  {
+    url: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Relaxing spa massage treatment',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1596178060810-72f53ce9a65c?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Hair styling and salon craft',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Nail polish and manicure tools',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1470259078422-826894b933aa?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Soft spa towels and candles',
+  },
 ];
 
 const WELLNESS: DemoPhoto[] = [
@@ -55,6 +71,14 @@ const WELLNESS: DemoPhoto[] = [
   {
     url: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1400&q=80',
     alt: 'Meditation and quiet recovery',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Stretching and mindful movement',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1400&q=80',
+    alt: 'Fitness and recovery space',
   },
 ];
 

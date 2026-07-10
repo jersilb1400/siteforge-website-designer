@@ -29,6 +29,8 @@ describe('output safety (reviewer HIGH findings)', () => {
     expect(safeHref('mailto:a@b.co')).toBe('mailto:a@b.co');
     expect(safeHref('tel:+15550102020')).toBe('tel:+15550102020');
     expect(safeHref('#contact')).toBe('#contact');
+    expect(safeHref('contact.html')).toBe('contact.html');
+    expect(safeHref('services.html')).toBe('services.html');
     expect(safeHref('javascript:alert(1)')).toBe('#');
     expect(safeHref('  JavaScript:alert(1)')).toBe('#');
     expect(safeHref('data:text/html,x')).toBe('#');
@@ -70,15 +72,71 @@ describe('palette resolution', () => {
 });
 
 describe('section mapping', () => {
-  it('always begins with home and ends with contact', () => {
+  it('always begins with home and ends with contact, with file hrefs', () => {
     const s = sectionsForPages(['Menu', 'Gallery']);
     expect(s[0]?.id).toBe('home');
+    expect(s[0]?.file).toBe('index.html');
     expect(s.at(-1)?.id).toBe('contact');
+    expect(s.at(-1)?.href).toBe('contact.html');
+    expect(s.find((x) => x.id === 'services')?.file).toBe('services.html');
   });
 
   it('collapses synonymous pages to one section', () => {
     const ids = sectionsForPages(['Menu', 'Services', 'Ministries']).map((x) => x.id);
     expect(ids.filter((i) => i === 'services').length).toBe(1);
+  });
+});
+
+describe('multi-page render', () => {
+  function multiSpec(): SiteSpec {
+    return {
+      projectId: 'p',
+      themeId: 'haven',
+      business: { name: 'Aura', tagline: 'Quiet luxury', industry: 'Day spa / Salon', tone: 'Warm', story: 'A calm retreat.' },
+      contact: { email: '', phone: '', address: 'Austin', hours: 'Tue–Sat 9–7', socials: {} },
+      sections: sectionsForPages(['Home', 'Services', 'About', 'Gallery', 'Contact']),
+      palette: rp({ brandColors: '#3e5245', tone: 'Warm' }),
+      images: [
+        { src: 'media/0.jpg', alt: 'Hero' },
+        { src: 'media/1.jpg', alt: 'Massage' },
+        { src: 'media/2.jpg', alt: 'Salon' },
+        { src: 'media/3.jpg', alt: 'Facial' },
+      ],
+      content: {
+        heroHeadline: 'Aura',
+        heroSub: 'A calm retreat.',
+        heroCtaLabel: 'Book an appointment',
+        heroCtaHref: 'contact.html',
+        aboutTitle: 'About Aura',
+        aboutBody: ['A calm retreat for skin and body.'],
+        servicesTitle: 'Rituals & services',
+        services: [
+          { name: 'Signature Facial', desc: 'Custom glow.' },
+          { name: 'Hot Stone Massage', desc: 'Warm stones.' },
+        ],
+        highlights: ['Licensed therapists'],
+        ctaTitle: 'Reserve your time at Aura',
+        ctaBody: 'Visit us in Austin.',
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  it('emits one HTML file per nav page with path-based nav', () => {
+    const { files } = renderSite(multiSpec());
+    expect(files['index.html']).toBeTruthy();
+    expect(files['services.html']).toBeTruthy();
+    expect(files['about.html']).toBeTruthy();
+    expect(files['gallery.html']).toBeTruthy();
+    expect(files['contact.html']).toBeTruthy();
+    const home = files['index.html']!;
+    expect(home).toContain('href="services.html"');
+    expect(home).not.toMatch(/href="#services"/);
+    expect(home).toContain('sf-teasers');
+    expect(files['services.html']).toContain('sf-page-hero');
+    expect(files['services.html']).toContain('Signature Facial');
+    expect(files['gallery.html']).toContain('media/');
+    expect(files['about.html']).toContain('sf-about--split');
   });
 });
 
@@ -110,10 +168,13 @@ describe('design override reaches the rendered HTML', () => {
       projectId: 'p', themeId: 'storefront',
       business: { name: 'Acme', tagline: 't', industry: 'Retail / shop', tone: 'Bold', story: 's' },
       contact: { email: 'a@b.co', phone: '', address: '', hours: '', socials: {} },
-      sections: [{ id: 'home', label: 'Home' }, { id: 'contact', label: 'Contact' }],
+      sections: [
+        { id: 'home', label: 'Home', file: 'index.html', href: 'index.html' },
+        { id: 'contact', label: 'Contact', file: 'contact.html', href: 'contact.html' },
+      ],
       palette: rp({ brandColors: '#1f4fa8', tone: 'Bold' }),
       images: [], content: {
-        heroHeadline: 'H', heroSub: 'S', heroCtaLabel: 'Go', heroCtaHref: '#contact',
+        heroHeadline: 'H', heroSub: 'S', heroCtaLabel: 'Go', heroCtaHref: 'contact.html',
         aboutTitle: 'About', aboutBody: ['x'], servicesTitle: 'What', services: [{ name: 's', desc: 'd' }],
         highlights: [], ctaTitle: 'C', ctaBody: 'b',
       },

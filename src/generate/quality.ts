@@ -17,6 +17,8 @@ export interface QualityResult {
   score: number; // 0-100
   pass: boolean; // score >= 90 and no critical failure
   checks: QualityCheck[];
+  /** Per-file pass flags for multi-page bundles (home drives the headline score). */
+  pages?: Record<string, { score: number; pass: boolean }>;
 }
 
 function contrast(a: string, b: string): number {
@@ -64,4 +66,39 @@ export function qualityCheck(html: string, spec: SiteSpec): QualityResult {
   const criticalOk = checks.filter((c) => critical.includes(c.id)).every((c) => c.ok);
 
   return { score, pass: score >= 90 && criticalOk, checks };
+}
+
+/** Run qualityCheck on every HTML file; home drives the published score, all must pass criticals. */
+export function qualityCheckBundle(files: Record<string, string>, spec: SiteSpec): QualityResult {
+  const htmlFiles = Object.entries(files).filter(([path]) => path.endsWith('.html'));
+  if (!htmlFiles.length) return qualityCheck('', spec);
+
+  const pages: Record<string, { score: number; pass: boolean }> = {};
+  let allPass = true;
+  for (const [path, html] of htmlFiles) {
+    const r = qualityCheck(html, spec);
+    pages[path] = { score: r.score, pass: r.pass };
+    if (!r.pass) allPass = false;
+  }
+
+  const home = qualityCheck(files['index.html'] ?? htmlFiles[0]![1], spec);
+  return {
+    ...home,
+    pass: home.pass && allPass,
+    pages,
+    checks: [
+      ...home.checks,
+      {
+        id: 'multi-page',
+        weight: 0,
+        ok: allPass,
+        note: allPass
+          ? `all ${htmlFiles.length} pages pass quality`
+          : `some pages failed: ${Object.entries(pages)
+              .filter(([, p]) => !p.pass)
+              .map(([k]) => k)
+              .join(', ')}`,
+      },
+    ],
+  };
 }

@@ -43,6 +43,13 @@ export const haven: Theme = {
        .sf-nav a{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;
          color:color-mix(in srgb,var(--haven-ink) 78%,transparent);opacity:1;transition:color .25s ease}
        .sf-nav a:hover{color:var(--haven-gold)}
+       .sf-nav a.is-active,.sf-nav a[aria-current="page"]{color:var(--haven-gold)}
+
+       /* Inner pages: photo banner under the floating nav */
+       .sf-page:not(.sf-page--home) .sf-page-hero{min-height:clamp(16rem,36vw,24rem);margin-top:-3.5rem;padding-top:3.5rem}
+       .sf-page:not(.sf-page--home) .sf-page-hero-title{font-family:var(--font-display);font-style:italic;font-weight:500}
+       .sf-page:not(.sf-page--home) .sf-teaser-card,.sf-page:not(.sf-page--home) .sf-service--imaged{
+         box-shadow:0 18px 40px -28px rgba(0,0,0,.28)}
 
        /* ---- full-bleed cinematic hero: brand name as the whole event ---- */
        .sf-hero{position:relative;max-width:none;margin:0;padding:0 1.25rem;

@@ -280,6 +280,16 @@ a:hover { color: var(--ash); }
   border-color: var(--brass-soft);
   color: var(--ash);
 }
+.btn.danger {
+  background: color-mix(in srgb, #8b2e2e 70%, var(--iron-2));
+  color: #f5e8e6;
+  border-color: color-mix(in srgb, #c45c5c 45%, var(--line));
+  box-shadow: none;
+}
+.btn.danger:hover {
+  background: color-mix(in srgb, #a33838 80%, var(--iron-2));
+  border-color: #d07070;
+}
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* --- forms --- */

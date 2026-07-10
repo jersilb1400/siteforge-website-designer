@@ -10,11 +10,14 @@ function baseSpec(): SiteSpec {
     themeId: 'atelier',
     business: { name: 'Acme', tagline: 't', industry: 'Retail / shop', tone: 'Professional', story: 's' },
     contact: { email: 'a@b.co', phone: '', address: '', hours: '', socials: {} },
-    sections: [{ id: 'home', label: 'Home' }, { id: 'contact', label: 'Contact' }],
+    sections: [
+      { id: 'home', label: 'Home', file: 'index.html', href: 'index.html' },
+      { id: 'contact', label: 'Contact', file: 'contact.html', href: 'contact.html' },
+    ],
     palette: resolvePalette({ brandColors: '#1f4fa8', tone: 'Professional' }),
     images: [],
     content: {
-      heroHeadline: 'Old headline', heroSub: 'sub', heroCtaLabel: 'Go', heroCtaHref: '#contact',
+      heroHeadline: 'Old headline', heroSub: 'sub', heroCtaLabel: 'Go', heroCtaHref: 'contact.html',
       aboutTitle: 'About Acme', aboutBody: ['x'], servicesTitle: 'What we do', services: [{ name: 'S', desc: 'd' }],
       highlights: [], ctaTitle: 'Connect', ctaBody: 'reach out',
     },

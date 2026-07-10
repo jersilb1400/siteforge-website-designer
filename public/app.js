@@ -69,7 +69,7 @@ async function loadProjects() {
       return;
     }
     list.innerHTML = projects.map((p) => `
-      <div class="spec rise" data-id="${escapeHtml(p.id)}">
+      <div class="spec rise" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">
         <div>
           <div class="title">${escapeHtml(p.name)}${isDemoProject(p) ? ' <span class="pill ready">Demo</span>' : ''}</div>
           <div class="muted" style="font-size:0.9rem;">${escapeHtml(p.client_name)}${p.industry ? ` · ${escapeHtml(p.industry)}` : ''}</div>
@@ -78,13 +78,26 @@ async function loadProjects() {
         <div class="row" style="justify-content:flex-end;">
           ${pill(p.status)}
           <button class="btn ghost open" style="padding:0.5rem 0.9rem;font-size:0.85rem;">Open</button>
+          <button class="btn danger delete" style="padding:0.5rem 0.9rem;font-size:0.85rem;" title="Delete project">Delete</button>
         </div>
       </div>`).join('');
     list.querySelectorAll('.spec').forEach((row) => {
       row.querySelector('.open').addEventListener('click', () => openProject(row.dataset.id));
+      row.querySelector('.delete').addEventListener('click', () => deleteProject(row.dataset.id, row.dataset.name));
     });
   } catch (e) {
     list.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function deleteProject(id, name) {
+  const label = name || id;
+  if (!confirm(`Delete “${label}”? This removes builds and previews permanently.`)) return;
+  try {
+    await api(`/api/projects/${id}`, { method: 'DELETE' });
+    loadProjects();
+  } catch (e) {
+    alert(e.message || 'Delete failed.');
   }
 }
 
@@ -105,7 +118,10 @@ async function openProject(id) {
             <h2 style="margin-top:0.5rem;">${escapeHtml(project.name)}${isDemoProject(project) ? ' <span class="pill ready">Demo</span>' : ''}</h2>
             <div class="id muted">${escapeHtml(project.id)}${project.industry ? ` · ${escapeHtml(project.industry)}` : ''}</div>
           </div>
-          ${pill(project.status)}
+          <div class="row" style="gap:0.5rem;">
+            ${pill(project.status)}
+            <button class="btn danger" id="delete-project" style="padding:0.45rem 0.85rem;font-size:0.85rem;">Delete</button>
+          </div>
         </div>
 
         ${session ? `
@@ -145,6 +161,7 @@ async function openProject(id) {
       </div>`;
 
     el('back').addEventListener('click', loadProjects);
+    el('delete-project').addEventListener('click', () => deleteProject(project.id, project.name));
     const copy = el('copy');
     if (copy) copy.addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(link); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy'), 1500); }

@@ -178,13 +178,19 @@ describe('demo content generation (no Anthropic)', () => {
     };
     const { files } = renderSite(spec);
     const html = files['index.html']!;
+    expect(Object.keys(files)).toEqual(
+      expect.arrayContaining(['index.html', 'services.html', 'about.html', 'gallery.html', 'contact.html']),
+    );
     expect(html).toContain('Lumen Salon');
     expect(html).toMatch(/<h1[^>]*>Lumen Salon<\/h1>/);
-    expect(html).toContain('Signature Facial');
+    expect(html).toContain('href="services.html"');
     expect(html).toContain('sf-hero--has-photo');
     expect(html).toContain('sf-hero-media--bleed');
-    expect(html).toContain('sf-gallery');
+    expect(html).toContain('sf-teasers');
     expect(html).toContain('media/0.jpg');
+    expect(files['services.html']).toContain('Signature Facial');
+    expect(files['services.html']).toContain('sf-page-hero');
+    expect(files['gallery.html']).toContain('sf-gallery');
     expect(html.toLowerCase()).not.toContain('lorem ipsum');
     expect(html).toContain('Cormorant');
     expect(html).toContain('sf-haven-rise');
@@ -195,7 +201,7 @@ describe('demo photo packs', () => {
   it('provides spa photos for Day spa / Salon', async () => {
     const { photosForIndustry } = await import('../src/generate/demo/photos');
     const photos = photosForIndustry('Day spa / Salon');
-    expect(photos.length).toBeGreaterThanOrEqual(4);
+    expect(photos.length).toBeGreaterThanOrEqual(8);
     expect(photos[0]!.url).toMatch(/^https:\/\/images\.unsplash\.com\//);
   });
 });

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env, Vars } from '../types';
-import { one, all, batch } from '../lib/db';
+import { one, all, batch, run } from '../lib/db';
 import { id } from '../lib/id';
 import { BadRequest, NotFound } from '../lib/errors';
 import { requireOperator } from '../middleware/auth';
@@ -97,4 +97,75 @@ projects.get('/:id', async (c) => {
   }
 
   return c.json({ project, session, interviewProgress });
+});
+
+/** Best-effort delete of every object under an R2 prefix (paginated). */
+async function deleteR2Prefix(env: Env, prefix: string): Promise<number> {
+  let deleted = 0;
+  let cursor: string | undefined;
+  do {
+    const listed = await env.R2.list({ prefix, cursor, limit: 1000 });
+    for (const obj of listed.objects) {
+      await env.R2.delete(obj.key);
+      deleted++;
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+  return deleted;
+}
+
+// Delete a project (and its demo) permanently: R2 builds/assets, then D1 row
+// (CASCADE clears sessions, answers, sources, assets, builds, jobs). Orphan
+// clients with no remaining projects are removed too.
+projects.delete('/:id', async (c) => {
+  const projectId = c.req.param('id');
+  const project = await one<{ id: string; client_id: string; name: string }>(
+    c.env,
+    'SELECT id, client_id, name FROM projects WHERE id = ?',
+    projectId,
+  );
+  if (!project) throw new NotFound('project');
+
+  const builds = await all<{ id: string; bundle_r2_key: string | null }>(
+    c.env,
+    'SELECT id, bundle_r2_key FROM builds WHERE project_id = ?',
+    projectId,
+  );
+  const assets = await all<{ r2_key: string }>(c.env, 'SELECT r2_key FROM assets WHERE project_id = ?', projectId);
+
+  let r2Deleted = 0;
+  for (const b of builds) {
+    r2Deleted += await deleteR2Prefix(c.env, `builds/${b.id}/`);
+    if (b.bundle_r2_key && b.bundle_r2_key !== `builds/${b.id}`) {
+      r2Deleted += await deleteR2Prefix(c.env, b.bundle_r2_key.endsWith('/') ? b.bundle_r2_key : `${b.bundle_r2_key}/`);
+    }
+  }
+  r2Deleted += await deleteR2Prefix(c.env, `projects/${projectId}/`);
+  for (const a of assets) {
+    try {
+      await c.env.R2.delete(a.r2_key);
+      r2Deleted++;
+    } catch {
+      /* already gone via prefix wipe */
+    }
+  }
+
+  const clientId = project.client_id;
+  await run(c.env, 'DELETE FROM projects WHERE id = ?', projectId);
+
+  const remaining = await one<{ n: number }>(
+    c.env,
+    'SELECT COUNT(*) AS n FROM projects WHERE client_id = ?',
+    clientId,
+  );
+  let clientDeleted = false;
+  if ((remaining?.n ?? 0) === 0) {
+    await run(c.env, 'DELETE FROM clients WHERE id = ?', clientId);
+    clientDeleted = true;
+  }
+
+  return c.json({
+    ok: true,
+    deleted: { projectId, name: project.name, r2Objects: r2Deleted, clientDeleted },
+  });
 });

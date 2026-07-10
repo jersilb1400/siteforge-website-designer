@@ -190,3 +190,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** Sales demos shipped text-only; prospects saw empty heroes/galleries. Workers AI FLUX is available but paid and slow for multi-image demos.
 - **Decision:** On `POST /api/demos`, fetch a curated industry photo pack from Unsplash CDN into R2 as confirmed assets before `generateBuild`. Centered heroes use full-bleed photo + scrim; gallery always renders when ≥1 image exists. Sanitize scraped taglines/hours; never use interview goals as service names.
 - **Consequences:** Demos look photographic without Anthropic/Workers AI image spend. Revisit FLUX generation if Jeremy approves paid image gen for bespoke client photos.
+
+## ADR-0017 — Multi-page static sites + project delete
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Single-page `#anchor` sites felt unfinished for sales demos; operators needed a way to clear old demos.
+- **Decision:** `renderSite` emits one HTML file per nav section (`index.html`, `services.html`, …) with path-based nav. Home uses teasers; inner pages get photo page-heroes. `DELETE /api/projects/:id` wipes R2 prefixes then D1 (CASCADE), and removes orphan clients.
+- **Consequences:** Preview URLs gain `/services.html` etc. Old single-page builds remain until regenerated. Industry-specific page types (Beliefs, Events) still map to the five core page templates.

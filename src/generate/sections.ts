@@ -1,27 +1,61 @@
 import { esc, attr, jsonLdSafe, safeHref } from './html';
-import type { SiteSpec } from './spec';
+import type { SiteSpec, SiteImage, SectionSpec } from './spec';
+import { contactHref, hrefFor } from './spec';
 import type { Theme } from './themes/types';
 
-// Semantic, accessible HTML section builders shared by every theme. Themes style
-// the stable `sf-` class names. Order is driven by SiteSpec.sections.
+// Semantic, accessible HTML builders shared by every theme. Themes style the
+// stable `sf-` class names. Multi-page: each nav item is its own HTML file;
+// Home is a landing with teasers; inner pages get a photo page-hero + body.
 
-function nav(spec: SiteSpec): string {
+function pageTitle(spec: SiteSpec, pageId: string): string {
+  const label = spec.sections.find((s) => s.id === pageId)?.label;
+  if (pageId === 'home' || !label) return spec.business.name;
+  return `${label} · ${spec.business.name}`;
+}
+
+function nav(spec: SiteSpec, currentId: string): string {
   const links = spec.sections
-    .map((s) => `<a href="#${esc(s.id)}">${esc(s.label)}</a>`)
+    .map((s) => {
+      const current = s.id === currentId;
+      return `<a href="${attr(s.href)}"${current ? ' aria-current="page" class="is-active"' : ''}>${esc(s.label)}</a>`;
+    })
     .join('');
   return `<header class="sf-header">
   <a class="sf-skip" href="#main">Skip to content</a>
   <div class="sf-nav-inner">
-    <a class="sf-brand" href="#home">${esc(spec.business.name)}</a>
+    <a class="sf-brand" href="index.html">${esc(spec.business.name)}</a>
     <nav class="sf-nav" aria-label="Primary">${links}</nav>
   </div>
 </header>`;
 }
 
-function hero(spec: SiteSpec, theme: Theme): string {
+function imgAt(spec: SiteSpec, index: number): SiteImage | undefined {
+  if (!spec.images.length) return undefined;
+  return spec.images[index % spec.images.length];
+}
+
+function pageHero(
+  spec: SiteSpec,
+  opts: { eyebrow?: string; title: string; lead: string; image?: SiteImage },
+): string {
+  const img = opts.image;
+  const media = img
+    ? `<div class="sf-page-hero-media" aria-hidden="true"><img src="${attr(img.src)}" alt="" loading="eager" width="1600" height="700" /></div>`
+    : '';
+  return `<section class="sf-page-hero${img ? ' sf-page-hero--has-photo' : ''}">
+  ${media}
+  <div class="sf-page-hero-body">
+    ${opts.eyebrow ? `<p class="sf-eyebrow">${esc(opts.eyebrow)}</p>` : ''}
+    <h1 class="sf-page-hero-title">${esc(opts.title)}</h1>
+    <p class="sf-page-hero-lead">${esc(opts.lead)}</p>
+  </div>
+</section>`;
+}
+
+function homeHero(spec: SiteSpec, theme: Theme): string {
   const c = spec.content;
   const img = spec.images[0];
-  // Full-bleed photo behind centered heroes; split heroes keep a side media panel.
+  const aboutLink = hrefFor(spec.sections, 'about');
   const fullBleedPhoto =
     theme.layout.hero === 'centered' && img
       ? `<div class="sf-hero-media sf-hero-media--bleed" aria-hidden="true"><img src="${attr(img.src)}" alt="" loading="eager" width="1600" height="1000" /></div>`
@@ -30,18 +64,12 @@ function hero(spec: SiteSpec, theme: Theme): string {
     theme.layout.hero !== 'centered' && img
       ? `<div class="sf-hero-media"><img src="${attr(img.src)}" alt="${attr(img.alt || spec.business.name)}" loading="eager" width="800" height="600" /></div>`
       : '';
-  // When the headline is the brand name, surface the tagline (or industry) as
-  // the eyebrow so the first viewport stays brand-first without a weak label.
   const brandIsHero = c.heroHeadline.trim().toLowerCase() === spec.business.name.trim().toLowerCase();
   const eyebrow = brandIsHero
     ? spec.business.tagline || spec.business.industry
     : spec.business.tagline
       ? spec.business.industry
       : '';
-  // Centered-hero themes may opt into a full-bleed atmosphere layer (grain +
-  // layered gradients + a faint oversized initial as a brand mark) purely via
-  // CSS. Themes that don't style `.sf-hero-atmosphere` render an inert, empty,
-  // aria-hidden div — no visual change.
   const initial = spec.business.name.trim().charAt(0).toUpperCase();
   const atmosphere =
     theme.layout.hero === 'centered'
@@ -56,80 +84,194 @@ function hero(spec: SiteSpec, theme: Theme): string {
     <p class="sf-hero-sub">${esc(c.heroSub)}</p>
     <div class="sf-hero-cta">
       <a class="sf-btn sf-btn--primary" href="${attr(safeHref(c.heroCtaHref))}">${esc(c.heroCtaLabel)}</a>
-      <a class="sf-btn sf-btn--ghost" href="#about">Learn more</a>
+      <a class="sf-btn sf-btn--ghost" href="${attr(aboutLink)}">Learn more</a>
     </div>
   </div>
   ${sideMedia}
 </section>`;
 }
 
-function about(spec: SiteSpec): string {
+function hasSection(spec: SiteSpec, id: string): boolean {
+  return spec.sections.some((s) => s.id === id);
+}
+
+function homeTeasers(spec: SiteSpec): string {
+  const parts: string[] = [];
   const c = spec.content;
+
+  if (hasSection(spec, 'services') && c.services.length) {
+    const href = hrefFor(spec.sections, 'services');
+    const preview = c.services.slice(0, 3);
+    const items = preview
+      .map((s, i) => {
+        const im = imgAt(spec, i + 1);
+        const thumb = im
+          ? `<div class="sf-teaser-media"><img src="${attr(im.src)}" alt="${attr(im.alt || s.name)}" loading="lazy" width="480" height="320" /></div>`
+          : '';
+        return `<article class="sf-teaser-card">${thumb}<div class="sf-teaser-copy"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div></article>`;
+      })
+      .join('');
+    parts.push(`<section class="sf-section sf-teasers sf-teasers--services">
+  <div class="sf-section-head">
+    <span class="sf-eyebrow">Offerings</span>
+    <h2>${esc(c.servicesTitle)}</h2>
+    <p class="sf-section-lead">A taste of what we do — explore the full list.</p>
+  </div>
+  <div class="sf-teaser-grid">${items}</div>
+  <p class="sf-teaser-more"><a class="sf-btn sf-btn--ghost" href="${attr(href)}">View all ${esc(spec.sections.find((s) => s.id === 'services')!.label.toLowerCase())}</a></p>
+</section>`);
+  }
+
+  if (hasSection(spec, 'about')) {
+    const href = hrefFor(spec.sections, 'about');
+    const im = imgAt(spec, Math.min(2, spec.images.length - 1));
+    const media = im
+      ? `<div class="sf-about-media"><img src="${attr(im.src)}" alt="${attr(im.alt || spec.business.name)}" loading="lazy" width="800" height="600" /></div>`
+      : '';
+    const blurb = c.aboutBody[0] || c.heroSub;
+    parts.push(`<section class="sf-section sf-teasers sf-teasers--about">
+  <div class="sf-about sf-about--split">
+    <div class="sf-about-body">
+      <span class="sf-eyebrow">About</span>
+      <h2>${esc(c.aboutTitle)}</h2>
+      <p>${esc(blurb)}</p>
+      <p class="sf-teaser-more"><a class="sf-btn sf-btn--ghost" href="${attr(href)}">Our story</a></p>
+    </div>
+    ${media}
+  </div>
+</section>`);
+  }
+
+  if (hasSection(spec, 'gallery') && spec.images.length) {
+    const href = hrefFor(spec.sections, 'gallery');
+    const thumbs = spec.images.slice(1, 5);
+    const use = thumbs.length ? thumbs : spec.images.slice(0, 4);
+    const tiles = use
+      .map(
+        (im) =>
+          `<figure class="sf-tile"><img src="${attr(im.src)}" alt="${attr(im.alt || '')}" loading="lazy" width="600" height="450" /></figure>`,
+      )
+      .join('');
+    parts.push(`<section class="sf-section sf-teasers sf-teasers--gallery">
+  <div class="sf-section-head">
+    <span class="sf-eyebrow">Gallery</span>
+    <h2>A look inside</h2>
+  </div>
+  <div class="sf-gallery-grid sf-gallery-grid--teaser">${tiles}</div>
+  <p class="sf-teaser-more"><a class="sf-btn sf-btn--ghost" href="${attr(href)}">See the gallery</a></p>
+</section>`);
+  }
+
+  // Always close home with a contact CTA strip.
+  const contact = contactHref(spec.sections);
+  parts.push(`<section class="sf-section sf-home-cta">
+  <div class="sf-home-cta-inner">
+    <h2>${esc(c.ctaTitle)}</h2>
+    <p>${esc(c.ctaBody)}</p>
+    <a class="sf-btn sf-btn--primary" href="${attr(safeHref(c.heroCtaHref || contact))}">${esc(c.heroCtaLabel)}</a>
+  </div>
+</section>`);
+
+  return parts.join('\n');
+}
+
+function aboutPage(spec: SiteSpec): string {
+  const c = spec.content;
+  const banner = imgAt(spec, 1) || spec.images[0];
+  const side = imgAt(spec, 2) || banner;
   const body = c.aboutBody.map((p) => `<p>${esc(p)}</p>`).join('');
   const highlights = c.highlights.length
     ? `<ul class="sf-highlights">${c.highlights.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>`
     : '';
-  return `<section class="sf-section sf-about" id="about">
-  <div class="sf-section-head"><span class="sf-eyebrow">About</span><h2>${esc(c.aboutTitle)}</h2></div>
+  const media = side
+    ? `<div class="sf-about-media"><img src="${attr(side.src)}" alt="${attr(side.alt || spec.business.name)}" loading="lazy" width="900" height="700" /></div>`
+    : '';
+  return `${pageHero(spec, {
+    eyebrow: 'About',
+    title: c.aboutTitle,
+    lead: c.aboutBody[0] || c.heroSub,
+    image: banner,
+  })}
+<section class="sf-section sf-about sf-about--split" id="about">
   <div class="sf-about-body">${body}${highlights}</div>
+  ${media}
 </section>`;
 }
 
-function services(spec: SiteSpec, theme: Theme): string {
+function servicesPage(spec: SiteSpec, theme: Theme): string {
   const c = spec.content;
   if (!c.services.length) return '';
-  // Inner wrapper enables a "double-bezel" nested treatment in themes that
-  // style `.sf-service-inner` (e.g. haven); it's an unstyled no-op elsewhere.
+  const banner = imgAt(spec, 1) || spec.images[0];
+  const label = spec.sections.find((s) => s.id === 'services')?.label || 'Services';
   const items = c.services
-    .map(
-      (s) =>
-        `<article class="sf-service"><div class="sf-service-inner"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div></article>`,
-    )
+    .map((s, i) => {
+      const im = imgAt(spec, i + 2);
+      const thumb = im
+        ? `<div class="sf-service-media"><img src="${attr(im.src)}" alt="${attr(im.alt || s.name)}" loading="lazy" width="640" height="420" /></div>`
+        : '';
+      return `<article class="sf-service sf-service--imaged"><div class="sf-service-inner">${thumb}<h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div></article>`;
+    })
     .join('');
-  return `<section class="sf-section sf-services sf-services--${theme.layout.services}" id="services">
-  <div class="sf-section-head"><span class="sf-eyebrow">Offerings</span><h2>${esc(c.servicesTitle)}</h2></div>
+  return `${pageHero(spec, {
+    eyebrow: 'Offerings',
+    title: c.servicesTitle,
+    lead: `Explore ${label.toLowerCase()} crafted for how you actually live.`,
+    image: banner,
+  })}
+<section class="sf-section sf-services sf-services--${theme.layout.services}" id="services">
   <div class="sf-service-grid">${items}</div>
 </section>`;
 }
 
-function gallery(spec: SiteSpec): string {
-  // Prefer images after the hero; if we only have one extra, still show a gallery.
-  // If the only images are the hero set, reuse from index 0 so demos aren't empty.
-  let imgs = spec.images.slice(1, 7);
-  if (imgs.length < 2) imgs = spec.images.slice(0, 6);
+function galleryPage(spec: SiteSpec): string {
+  let imgs = spec.images.slice(0, 12);
   if (imgs.length < 1) return '';
+  const banner = imgs[0];
   const tiles = imgs
     .map(
-      (im) =>
-        `<figure class="sf-tile"><img src="${attr(im.src)}" alt="${attr(im.alt || '')}" loading="lazy" width="600" height="450" /></figure>`,
+      (im, i) =>
+        `<figure class="sf-tile${i === 0 ? ' sf-tile--feature' : ''}"><img src="${attr(im.src)}" alt="${attr(im.alt || '')}" loading="${i < 2 ? 'eager' : 'lazy'}" width="800" height="600" /></figure>`,
     )
     .join('');
-  return `<section class="sf-section sf-gallery" id="gallery">
-  <div class="sf-section-head"><span class="sf-eyebrow">Gallery</span><h2>A look inside</h2></div>
-  <div class="sf-gallery-grid">${tiles}</div>
+  return `${pageHero(spec, {
+    eyebrow: 'Gallery',
+    title: 'A look inside',
+    lead: 'Spaces, details, and the atmosphere we build for every visit.',
+    image: banner,
+  })}
+<section class="sf-section sf-gallery" id="gallery">
+  <div class="sf-gallery-grid sf-gallery-grid--rich">${tiles}</div>
 </section>`;
 }
 
-function contact(spec: SiteSpec, theme: Theme): string {
+function contactPage(spec: SiteSpec, theme: Theme): string {
   const ct = spec.contact;
+  const banner = imgAt(spec, Math.max(0, spec.images.length - 1)) || spec.images[0];
   const rows: string[] = [];
   if (ct.address) rows.push(`<div class="sf-contact-row"><span>Visit</span><p>${esc(ct.address)}</p></div>`);
   if (ct.hours) rows.push(`<div class="sf-contact-row"><span>Hours</span><p>${esc(ct.hours)}</p></div>`);
-  if (ct.phone) rows.push(`<div class="sf-contact-row"><span>Call</span><p><a href="tel:${attr(ct.phone.replace(/[^\d+]/g, ''))}">${esc(ct.phone)}</a></p></div>`);
-  if (ct.email) rows.push(`<div class="sf-contact-row"><span>Email</span><p><a href="mailto:${attr(ct.email)}">${esc(ct.email)}</a></p></div>`);
+  if (ct.phone)
+    rows.push(
+      `<div class="sf-contact-row"><span>Call</span><p><a href="tel:${attr(ct.phone.replace(/[^\d+]/g, ''))}">${esc(ct.phone)}</a></p></div>`,
+    );
+  if (ct.email)
+    rows.push(
+      `<div class="sf-contact-row"><span>Email</span><p><a href="mailto:${attr(ct.email)}">${esc(ct.email)}</a></p></div>`,
+    );
   const socials = Object.entries(ct.socials || {})
     .map(([k, v]) => `<a href="${attr(safeHref(v))}" rel="noopener">${esc(k)}</a>`)
     .join('');
-  // Booking-forward themes (haven) get a second, prominent CTA button right
-  // where the visitor is about to leave — a plain lead paragraph isn't enough
-  // for a spa that lives and dies by bookings.
   const repeatCta =
     theme.id === 'haven'
       ? `<div class="sf-contact-cta"><a class="sf-btn sf-btn--primary" href="${attr(safeHref(spec.content.heroCtaHref))}">${esc(spec.content.heroCtaLabel)}</a></div>`
       : '';
-  return `<section class="sf-section sf-contact" id="contact">
-  <div class="sf-section-head"><span class="sf-eyebrow">Contact</span><h2>${esc(spec.content.ctaTitle)}</h2></div>
-  <p class="sf-contact-lead">${esc(spec.content.ctaBody)}</p>
+  return `${pageHero(spec, {
+    eyebrow: 'Contact',
+    title: spec.content.ctaTitle,
+    lead: spec.content.ctaBody,
+    image: banner,
+  })}
+<section class="sf-section sf-contact" id="contact">
   ${repeatCta}
   <div class="sf-contact-grid">${rows.join('')}</div>
   ${socials ? `<div class="sf-socials">${socials}</div>` : ''}
@@ -145,52 +287,65 @@ function footer(spec: SiteSpec): string {
 }
 
 // JSON-LD structured data + OG tags improve the SEO Lighthouse score.
-export function headMeta(spec: SiteSpec): string {
-  // Fall back so the description meta is never empty (SEO).
+export function headMeta(spec: SiteSpec, pageId = 'home'): string {
   const descText =
-    spec.content.heroSub ||
-    spec.business.tagline ||
-    spec.content.aboutBody[0] ||
-    `${spec.business.name} — ${spec.business.industry}`;
+    pageId === 'home'
+      ? spec.content.heroSub ||
+        spec.business.tagline ||
+        spec.content.aboutBody[0] ||
+        `${spec.business.name} — ${spec.business.industry}`
+      : `${pageTitle(spec, pageId)} — ${spec.content.heroSub || spec.business.tagline || spec.business.industry}`;
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: spec.business.name,
-    description: descText,
+    description: spec.content.heroSub || spec.business.tagline || descText,
     ...(spec.contact.phone ? { telephone: spec.contact.phone } : {}),
     ...(spec.contact.email ? { email: spec.contact.email } : {}),
     ...(spec.contact.address ? { address: spec.contact.address } : {}),
   };
   const desc = esc(descText);
   return `<meta name="description" content="${desc}" />
-<meta property="og:title" content="${esc(spec.business.name)}" />
+<meta property="og:title" content="${esc(pageTitle(spec, pageId))}" />
 <meta property="og:description" content="${desc}" />
 <meta property="og:type" content="website" />
 ${spec.images[0] ? `<meta property="og:image" content="${attr(safeHref(spec.images[0].src))}" />` : ''}
 <script type="application/ld+json">${jsonLdSafe(ld)}</script>`;
 }
 
-// Assemble the full <body> content in section order.
-export function renderBody(spec: SiteSpec, theme: Theme): string {
-  const byId: Record<string, () => string> = {
-    home: () => hero(spec, theme),
-    about: () => about(spec),
-    services: () => services(spec, theme),
-    gallery: () => gallery(spec),
-    contact: () => contact(spec, theme),
-  };
-  const rendered = new Set<string>();
-  const parts = [nav(spec), '<main id="main">'];
-  for (const s of spec.sections) {
-    if (rendered.has(s.id) || !byId[s.id]) continue;
-    parts.push(byId[s.id]!());
-    rendered.add(s.id);
+function pageMain(spec: SiteSpec, theme: Theme, pageId: string): string {
+  switch (pageId) {
+    case 'home':
+      return homeHero(spec, theme) + '\n' + homeTeasers(spec);
+    case 'about':
+      return aboutPage(spec);
+    case 'services':
+      return servicesPage(spec, theme);
+    case 'gallery':
+      return galleryPage(spec);
+    case 'contact':
+      return contactPage(spec, theme);
+    default:
+      return '';
   }
-  // Ensure gallery appears if we have images even when not in nav.
-  if (!rendered.has('gallery')) {
-    const g = gallery(spec);
-    if (g) parts.push(g);
+}
+
+/** Assemble <body> for a single page in the multi-page bundle. */
+export function renderBody(spec: SiteSpec, theme: Theme, pageId: string): string {
+  const main = pageMain(spec, theme, pageId);
+  return [nav(spec, pageId), `<main id="main">`, main, `</main>`, footer(spec)].join('\n');
+}
+
+export function documentTitle(spec: SiteSpec, pageId: string): string {
+  return pageTitle(spec, pageId);
+}
+
+export function pagesToRender(spec: SiteSpec): SectionSpec[] {
+  // Always render every section in the nav. If gallery is missing from nav but
+  // we have images, still emit gallery.html so teasers can link to it when present.
+  const out = [...spec.sections];
+  if (!out.some((s) => s.id === 'gallery') && spec.images.length >= 2) {
+    out.push({ id: 'gallery', label: 'Gallery', file: 'gallery.html', href: 'gallery.html' });
   }
-  parts.push('</main>', footer(spec));
-  return parts.join('\n');
+  return out;
 }

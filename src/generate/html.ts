@@ -33,13 +33,16 @@ export function jsonLdSafe(obj: unknown): string {
   );
 }
 
-// Only these URL schemes may appear in generated hrefs. Anything else (e.g.
-// javascript:, data:) collapses to '#' so scraped/AI-supplied links can't
-// smuggle script execution into the published site.
+// Only these URL schemes / relative paths may appear in generated hrefs.
+// Anything else (e.g. javascript:, data:) collapses to '#' so scraped/AI-
+// supplied links can't smuggle script execution into the published site.
 const SAFE_SCHEME = /^(https?:|mailto:|tel:|#|\/)/i;
+// Multi-page bundles use same-directory HTML files (services.html, etc.).
+const RELATIVE_HTML = /^[a-z0-9][a-z0-9._/-]*\.html(?:#[a-z0-9_-]*)?$/i;
 
 export function safeHref(url: unknown): string {
   const s = String(url ?? '').trim();
   if (!s) return '#';
-  return SAFE_SCHEME.test(s) ? s : '#';
+  if (SAFE_SCHEME.test(s) || RELATIVE_HTML.test(s)) return s;
+  return '#';
 }

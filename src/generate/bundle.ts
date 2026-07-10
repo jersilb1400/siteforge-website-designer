@@ -8,7 +8,7 @@ import { selectTheme, getTheme, themeExists } from './themes';
 import { generateContent, type ContentInputs, cleanHours } from './content';
 import { renderSite } from './render';
 import { sectionsForPages, type SiteSpec, type SiteImage } from './spec';
-import { qualityCheck } from './quality';
+import { qualityCheckBundle } from './quality';
 import { deriveDesign } from './design-director';
 
 // Orchestrates a build: interview profile + CONFIRMED source content -> spec ->
@@ -154,7 +154,7 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
       env,
       `SELECT id, r2_key, alt_text FROM assets
         WHERE project_id = ? AND review_status IN ('confirmed','edited')
-        ORDER BY created_at ASC LIMIT 8`,
+        ORDER BY created_at ASC LIMIT 12`,
       projectId,
     );
     let i = 0;
@@ -176,9 +176,8 @@ export async function finalizeBuild(env: Env, projectId: string, spec: SiteSpec)
       await env.R2.put(`${buildPrefix}/${path}`, body, { httpMetadata: { contentType: contentTypeFor(path) } });
     }
 
-    // Automated quality gate (proxy for the Lighthouse/WCAG bar; a real
-    // Lighthouse run lives in scripts/lighthouse-gate.mjs for CI).
-    const quality = qualityCheck(files['index.html'] ?? '', spec);
+    // Automated quality gate across every page in the multi-page bundle.
+    const quality = qualityCheckBundle(files, spec);
 
     const previewUrl = `/preview/${buildId}/`;
     await run(

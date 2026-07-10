@@ -75,7 +75,8 @@ function goalToCta(goals: string[], confirmedCta?: string): { label: string; kin
 function ctaHref(kind: string, profile: SiteProfile): string {
   if (kind === 'booking' && profile.content.bookingUrl) return profile.content.bookingUrl;
   if (kind === 'donation' && profile.content.donationUrl) return profile.content.donationUrl;
-  return '#contact';
+  // Multi-page sites: contact lives on its own file (Book/Visit labels still map here).
+  return 'contact.html';
 }
 
 function servicesTitleFor(industry: string, override?: string): string {
