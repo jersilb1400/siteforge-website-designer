@@ -4,7 +4,7 @@ import { NotFound, BadRequest } from '../lib/errors';
 import { anthropicFrom } from '../lib/anthropic';
 import { models } from '../lib/config';
 import { readableInk, adjustForContrast, type PaletteTokens } from './palette';
-import { themeExists } from './themes';
+import { themeExists, THEMES } from './themes';
 import type { SiteSpec } from './spec';
 import { finalizeBuild, type BuildResult } from './bundle';
 
@@ -62,7 +62,8 @@ export function applyInstruction(specIn: SiteSpec, instruction: string): Revisio
     [/\bbold|punchy|vibrant\b/, 'storefront'],
     [/\bwarm|welcoming|soft\b/, 'sanctuary'],
   ];
-  const explicitTheme = /\b(atelier|sanctuary|storefront)\b/.exec(text)?.[1];
+  // Match any theme by id (all 7), not just the original three.
+  const explicitTheme = THEMES.map((t) => t.id).find((id) => new RegExp(`\\b${id}\\b`).test(text));
   if (explicitTheme && themeExists(explicitTheme)) {
     spec.themeId = explicitTheme; changed.push(`theme=${explicitTheme}`);
   } else {
@@ -109,7 +110,7 @@ async function reviseWithClaude(env: Env, spec: SiteSpec, instruction: string): 
       temperature: 0.3,
       system:
         'You translate a website revision request into a small JSON patch. Only include fields the user actually asked to change. ' +
-        'Allowed keys: brand (#hex), accent (#hex), themeId (atelier|sanctuary|storefront), heroHeadline, heroSub, aboutTitle. Omit everything else.',
+        `Allowed keys: brand (#hex), accent (#hex), themeId (${THEMES.map((t) => t.id).join('|')}), heroHeadline, heroSub, aboutTitle. Omit everything else.`,
       messages: [
         { role: 'user', content: `Current headline: "${spec.content.heroHeadline}". Current theme: ${spec.themeId}. Brand: ${spec.palette.brand}.\n\nRequest: "${instruction}"\n\nReturn the JSON patch.` },
       ],
@@ -122,9 +123,13 @@ async function reviseWithClaude(env: Env, spec: SiteSpec, instruction: string): 
 export async function reviseBuild(env: Env, projectId: string, instruction: string): Promise<BuildResult & { changed: string[] }> {
   if (!instruction || !instruction.trim()) throw new BadRequest('Provide a revision instruction.');
 
+  // Base the revision on the most recent usable build. Published builds have
+  // status 'deployed', so 'ready' alone would make revise impossible after a
+  // publish (the normal steady state) — include both, exclude building/failed.
   const latest = await one<{ spec_json: string | null }>(
     env,
-    `SELECT spec_json FROM builds WHERE project_id = ? AND status = 'ready' ORDER BY version DESC LIMIT 1`,
+    `SELECT spec_json FROM builds WHERE project_id = ? AND status IN ('ready','deployed')
+       ORDER BY version DESC LIMIT 1`,
     projectId,
   );
   if (!latest?.spec_json) throw new NotFound('a previous build to revise');

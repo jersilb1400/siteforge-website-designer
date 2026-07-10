@@ -29,6 +29,14 @@ describe('natural-language revision (deterministic)', () => {
     expect(applyInstruction(baseSpec(), 'use the atelier theme').spec.themeId).toBe('atelier');
   });
 
+  it('switches to any of the 7 themes by explicit name (regression)', () => {
+    for (const id of ['atelier', 'sanctuary', 'storefront', 'ledger', 'meridian', 'forge', 'gallery']) {
+      const out = applyInstruction(baseSpec(), `use the ${id} theme`);
+      expect(out.spec.themeId).toBe(id);
+      expect(out.changed).toContain(`theme=${id}`);
+    }
+  });
+
   it('darkens the brand color and keeps contrast valid', () => {
     const before = baseSpec().palette.brand;
     const out = applyInstruction(baseSpec(), 'make the header darker');

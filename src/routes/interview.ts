@@ -98,6 +98,23 @@ interview.post('/:sessionId/answer', async (c) => {
     (Array.isArray(v) && v.length === 0);
   if (q.required && empty) throw new BadRequest(`"${q.text}" is required.`);
 
+  // Type/shape validation so malformed answers fail loudly instead of being
+  // silently coerced (e.g. a multi_select sent as a bare string -> dropped).
+  if (!empty) {
+    if (q.type === 'multi_select' && !Array.isArray(v)) {
+      throw new BadRequest(`"${q.text}" expects a list of selections.`);
+    }
+    if (q.type === 'boolean' && typeof v !== 'boolean') {
+      throw new BadRequest(`"${q.text}" expects yes or no.`);
+    }
+    // For single-select with a fixed option set, the value must be one of them.
+    // (multi_select page lists are resolved dynamically, so they're not checked
+    // for membership — only that they're an array.)
+    if (q.type === 'single_select' && q.options && typeof v === 'string' && !q.options.includes(v)) {
+      throw new BadRequest(`"${v}" is not a valid choice for "${q.text}".`);
+    }
+  }
+
   const answerId = id('ans');
   await run(
     c.env,
