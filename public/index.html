@@ -16,7 +16,13 @@
 <body>
   <header class="topbar">
     <div class="wrap">
-      <div class="brand"><span class="mark">SF</span> SiteForge</div>
+      <a class="brand" href="/#home"><span class="mark">SF</span> SiteForge</a>
+      <nav class="site-nav" aria-label="Workshop">
+        <a href="/#home" data-nav="home">Home</a>
+        <a href="/#projects" data-nav="projects">Projects</a>
+        <a href="/#demos" data-nav="demos">Demos</a>
+        <a href="/how-to.html" data-nav="guide">Guide</a>
+      </nav>
       <button id="signout" class="btn ghost hidden" style="padding:0.45rem 0.95rem;font-size:0.82rem;">Sign out</button>
     </div>
   </header>
@@ -53,14 +59,40 @@
     <section id="app" class="hidden">
       <div class="row rise forge-workshop-head" style="justify-content:space-between;align-items:flex-end;margin-bottom:1.75rem;">
         <div>
-          <div class="eyebrow">workshop</div>
-          <h1 style="margin-top:0.55rem;">On the anvil</h1>
-          <p class="muted" style="margin:0.5rem 0 0;max-width:42ch;">Projects, demos, and live previews — forged here, shipped to clients.</p>
+          <div class="eyebrow" id="workshop-eyebrow">workshop</div>
+          <h1 id="workshop-title" style="margin-top:0.55rem;">On the anvil</h1>
+          <p class="muted" id="workshop-lede" style="margin:0.5rem 0 0;max-width:46ch;">Projects, demos, and live previews — forged here, shipped to clients.</p>
         </div>
-        <div class="row" style="gap:0.55rem;">
+        <div class="row" id="workshop-actions" style="gap:0.55rem;">
           <button id="demo-btn" class="btn ghost">Create demo</button>
           <button id="new-btn" class="btn primary">+ New project</button>
         </div>
+      </div>
+
+      <!-- Home overview -->
+      <div id="home-panel" class="hidden rise" style="margin-bottom:1.75rem;">
+        <div class="home-grid">
+          <a class="home-card" href="/#projects">
+            <span class="eyebrow">client work</span>
+            <h2>Projects</h2>
+            <p class="muted">Interview links, ingest, generate, publish.</p>
+          </a>
+          <a class="home-card" href="/#demos">
+            <span class="eyebrow">sales</span>
+            <h2>Demos</h2>
+            <p class="muted">Forge a polished sample site in one strike.</p>
+          </a>
+          <a class="home-card" href="/how-to.html">
+            <span class="eyebrow">learn</span>
+            <h2>Guide</h2>
+            <p class="muted">Five steps from cold iron to live metal.</p>
+          </a>
+        </div>
+        <div class="row" style="justify-content:space-between;align-items:baseline;margin:1.75rem 0 0.85rem;">
+          <h2 style="font-size:1.15rem;margin:0;">Recent on the anvil</h2>
+          <a class="muted" href="/#projects" style="font-size:0.85rem;">View all →</a>
+        </div>
+        <div id="home-recent" class="stack" aria-live="polite"></div>
       </div>
 
       <!-- new project form -->

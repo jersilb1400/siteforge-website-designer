@@ -41,6 +41,116 @@ function show(view) {
   el('signout').classList.toggle('hidden', view !== 'app');
   document.body.classList.toggle('is-gate', view === 'gate');
   document.body.classList.toggle('is-workshop', view === 'app');
+  if (view === 'app') applyWorkshopRoute();
+}
+
+function setNavActive(key) {
+  document.querySelectorAll('.site-nav [data-nav]').forEach((a) => {
+    const on = a.getAttribute('data-nav') === key;
+    a.classList.toggle('is-active', on);
+    if (on) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+}
+
+function parseWorkshopRoute() {
+  const raw = (location.hash || '#home').replace(/^#/, '').trim() || 'home';
+  if (raw.startsWith('project/')) {
+    return { view: 'project', id: raw.slice('project/'.length) };
+  }
+  if (raw === 'projects' || raw === 'demos' || raw === 'home') return { view: raw };
+  return { view: 'home' };
+}
+
+function applyWorkshopRoute() {
+  if (el('app').classList.contains('hidden')) return;
+  const route = parseWorkshopRoute();
+  const homePanel = el('home-panel');
+  const list = el('list');
+  const actions = el('workshop-actions');
+  const eyebrow = el('workshop-eyebrow');
+  const title = el('workshop-title');
+  const lede = el('workshop-lede');
+
+  el('new-form').classList.add('hidden');
+  el('demo-form').classList.add('hidden');
+  el('created').classList.add('hidden');
+
+  if (route.view === 'project' && route.id) {
+    setNavActive('projects');
+    homePanel.classList.add('hidden');
+    list.classList.remove('hidden');
+    actions.classList.add('hidden');
+    eyebrow.textContent = 'project';
+    title.textContent = 'Project detail';
+    lede.textContent = 'Interview, media, generate, and publish from one place.';
+    openProject(route.id);
+    return;
+  }
+
+  actions.classList.remove('hidden');
+  list.classList.remove('hidden');
+
+  if (route.view === 'home') {
+    setNavActive('home');
+    homePanel.classList.remove('hidden');
+    list.classList.add('hidden');
+    actions.classList.add('hidden');
+    eyebrow.textContent = 'workshop';
+    title.textContent = 'On the anvil';
+    lede.textContent = 'Projects, demos, and live previews — forged here, shipped to clients.';
+    loadHomeRecent();
+    return;
+  }
+
+  homePanel.classList.add('hidden');
+
+  if (route.view === 'demos') {
+    setNavActive('demos');
+    eyebrow.textContent = 'sales demos';
+    title.textContent = 'Forge a demo';
+    lede.textContent = 'Polished sample sites for prospects — no interview required.';
+    el('demo-btn').classList.remove('hidden');
+    el('new-btn').classList.add('hidden');
+    el('demo-form').classList.remove('hidden');
+    ensureDemoIndustries().catch((e) => { el('demo-err').textContent = e.message; });
+    loadProjects('demos');
+    return;
+  }
+
+  // projects
+  setNavActive('projects');
+  eyebrow.textContent = 'client work';
+  title.textContent = 'Projects';
+  lede.textContent = 'Interview links, web presence, media uploads, and versioned previews.';
+  el('demo-btn').classList.add('hidden');
+  el('new-btn').classList.remove('hidden');
+  loadProjects('projects');
+}
+
+async function loadHomeRecent() {
+  const box = el('home-recent');
+  box.innerHTML = '<div class="card center"><span class="spinner"></span></div>';
+  try {
+    const { projects } = await api('/api/projects');
+    if (!projects.length) {
+      box.innerHTML = `<div class="card center muted">Nothing on the anvil yet. <a href="/#projects">Start a project</a> or <a href="/#demos">forge a demo</a>.</div>`;
+      return;
+    }
+    box.innerHTML = projects.slice(0, 5).map((p) => `
+      <div class="spec rise" data-id="${escapeHtml(p.id)}">
+        <div>
+          <div class="title">${escapeHtml(p.name)}${isDemoProject(p) ? ' <span class="pill ready">Demo</span>' : ''}</div>
+          <div class="muted" style="font-size:0.9rem;">${escapeHtml(p.client_name)}${p.industry ? ` · ${escapeHtml(p.industry)}` : ''}</div>
+        </div>
+        <div class="row" style="justify-content:flex-end;">
+          ${pill(p.status)}
+          <a class="btn ghost" style="padding:0.5rem 0.9rem;font-size:0.85rem;" href="/#project/${escapeHtml(p.id)}">Open</a>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    box.innerHTML = `<div class="notice">${escapeHtml(e.message)}</div>`;
+  }
 }
 
 function signOut() {
@@ -76,16 +186,26 @@ function isDemoProject(p) {
   return String(p.name || '').startsWith('Demo —');
 }
 
-async function loadProjects() {
+async function loadProjects(filter = 'all') {
   const list = el('list');
   list.innerHTML = '<div class="card center"><span class="spinner"></span></div>';
   try {
     const { projects } = await api('/api/projects');
-    if (!projects.length) {
-      list.innerHTML = `<div class="card center muted">No projects yet. Start one to generate an interview link, or create a sales demo.</div>`;
+    let rows = projects;
+    if (filter === 'demos') rows = projects.filter(isDemoProject);
+    else if (filter === 'projects') rows = projects.filter((p) => !isDemoProject(p));
+
+    if (!rows.length) {
+      const empty =
+        filter === 'demos'
+          ? 'No demos yet. Fill the brief above and strike to forge a preview.'
+          : filter === 'projects'
+            ? 'No client projects yet. Start one to generate an interview link.'
+            : 'No projects yet. Start one to generate an interview link, or create a sales demo.';
+      list.innerHTML = `<div class="card center muted">${empty}</div>`;
       return;
     }
-    list.innerHTML = projects.map((p) => `
+    list.innerHTML = rows.map((p) => `
       <div class="spec rise" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">
         <div>
           <div class="title">${escapeHtml(p.name)}${isDemoProject(p) ? ' <span class="pill ready">Demo</span>' : ''}</div>
@@ -94,12 +214,11 @@ async function loadProjects() {
         </div>
         <div class="row" style="justify-content:flex-end;">
           ${pill(p.status)}
-          <button class="btn ghost open" style="padding:0.5rem 0.9rem;font-size:0.85rem;">Open</button>
+          <a class="btn ghost open" style="padding:0.5rem 0.9rem;font-size:0.85rem;" href="/#project/${escapeHtml(p.id)}">Open</a>
           <button class="btn danger delete" style="padding:0.5rem 0.9rem;font-size:0.85rem;" title="Delete project">Delete</button>
         </div>
       </div>`).join('');
     list.querySelectorAll('.spec').forEach((row) => {
-      row.querySelector('.open').addEventListener('click', () => openProject(row.dataset.id));
       row.querySelector('.delete').addEventListener('click', () => deleteProject(row.dataset.id, row.dataset.name));
     });
   } catch (e) {
@@ -112,22 +231,35 @@ async function deleteProject(id, name) {
   if (!confirm(`Delete “${label}”? This removes builds and previews permanently.`)) return;
   try {
     await api(`/api/projects/${id}`, { method: 'DELETE' });
-    loadProjects();
+    const route = parseWorkshopRoute();
+    if (route.view === 'project') {
+      location.hash = isDemoProject({ name: label }) ? 'demos' : 'projects';
+    } else {
+      applyWorkshopRoute();
+    }
   } catch (e) {
     alert(e.message || 'Delete failed.');
   }
 }
 
 async function openProject(id) {
+  if (location.hash !== `#project/${id}`) {
+    location.hash = `project/${id}`;
+    return;
+  }
   const list = el('list');
   try {
     const { project, session, interviewProgress } = await api(`/api/projects/${id}`);
     const link = session ? `${location.origin}/interview.html?s=${session.id}` : null;
     const pct = interviewProgress && interviewProgress.total
       ? Math.round((interviewProgress.answered / interviewProgress.total) * 100) : 0;
+    const backHash = isDemoProject(project) ? '#demos' : '#projects';
+    setNavActive(isDemoProject(project) ? 'demos' : 'projects');
+    el('workshop-title').textContent = project.name;
+    el('workshop-eyebrow').textContent = isDemoProject(project) ? 'sales demo' : 'project';
 
     list.innerHTML = `
-      <button class="btn ghost" id="back" style="margin-bottom:1rem;padding:0.5rem 0.9rem;font-size:0.85rem;">← All projects</button>
+      <a class="btn ghost" href="/${backHash}" style="margin-bottom:1rem;padding:0.5rem 0.9rem;font-size:0.85rem;display:inline-block;">← Back</a>
       <div class="card stack rise">
         <div class="row" style="justify-content:space-between;">
           <div>
@@ -196,7 +328,6 @@ async function openProject(id) {
         </div>
       </div>`;
 
-    el('back').addEventListener('click', loadProjects);
     el('delete-project').addEventListener('click', () => deleteProject(project.id, project.name));
     const copy = el('copy');
     if (copy) copy.addEventListener('click', async () => {
@@ -418,7 +549,8 @@ async function createProject() {
     el('created').innerHTML = `Project created. Interview link: <a href="${escapeHtml(link)}" target="_blank" rel="noopener" class="mono">${escapeHtml(link)}</a>`;
     el('new-form').classList.add('hidden');
     el('clientName').value = el('contactEmail').value = el('projectName').value = '';
-    loadProjects();
+    if (r.project?.id) location.hash = `project/${r.project.id}`;
+    else loadProjects('projects');
   } catch (e) {
     el('new-err').textContent = e.message;
   } finally {
@@ -442,11 +574,7 @@ async function ensureDemoIndustries() {
 }
 
 function showDemoForm() {
-  el('new-form').classList.add('hidden');
-  el('demo-form').classList.toggle('hidden');
-  if (!el('demo-form').classList.contains('hidden')) {
-    ensureDemoIndustries().catch((e) => { el('demo-err').textContent = e.message; });
-  }
+  location.hash = 'demos';
 }
 
 async function createDemo() {
@@ -473,16 +601,14 @@ async function createDemo() {
     el('created').innerHTML = `Demo ready for <b>${escapeHtml(businessName)}</b>.
       <a href="${escapeHtml(r.previewUrl)}" target="_blank" rel="noopener">Open preview</a>
       · theme <span class="mono">${escapeHtml(r.themeId)}</span>`;
-    el('demo-form').classList.add('hidden');
     el('demoName').value = el('demoTagline').value = el('demoBlurb').value = '';
     el('demoPhone').value = el('demoEmail').value = el('demoCity').value = el('demoLogo').value = '';
     window.open(r.previewUrl, '_blank', 'noopener');
-    await loadProjects();
-    openProject(r.projectId);
+    location.hash = `project/${r.projectId}`;
   } catch (e) {
     el('demo-err').textContent = e.message;
   } finally {
-    btn.disabled = false; btn.textContent = 'Forge demo preview';
+    btn.disabled = false; btn.textContent = 'Strike — forge preview';
   }
 }
 
@@ -491,6 +617,7 @@ el('unlock').addEventListener('click', unlock);
 el('token').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
 el('signout').addEventListener('click', signOut);
 el('new-btn').addEventListener('click', () => {
+  if (parseWorkshopRoute().view !== 'projects') location.hash = 'projects';
   el('demo-form').classList.add('hidden');
   el('new-form').classList.toggle('hidden');
 });
@@ -499,15 +626,18 @@ el('create').addEventListener('click', createProject);
 el('demo-btn').addEventListener('click', showDemoForm);
 el('cancel-demo').addEventListener('click', () => el('demo-form').classList.add('hidden'));
 el('create-demo').addEventListener('click', createDemo);
+window.addEventListener('hashchange', () => {
+  if (!el('app').classList.contains('hidden')) applyWorkshopRoute();
+});
 
 // Boot: if we have a stored token, try it; otherwise show the gate.
 (async function boot() {
+  if (!location.hash || location.hash === '#') location.hash = 'home';
   if (token) {
     try {
       await api('/api/projects');
       setOperatorCookie(token);
       show('app');
-      loadProjects();
       return;
     } catch { /* fall through to gate */ }
   }

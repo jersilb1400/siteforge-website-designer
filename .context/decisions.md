@@ -218,3 +218,10 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Context:** Themes alone produced recolored clones; quality gate only checked SEO/a11y. Sales demos and client sites needed art-directed layouts, role-assigned photography, conversion copy, and a fix pass for template-y output.
 - **Decision:** Guardrailed `CompositionRecipe` catalog (`editorial-luxury`, `warm-hospitality`, `reverent-sanctuary`, `clean-clinic`, `craft-trade`, `mission-ledger`) drives hero mode, home teaser order, extra pages (team/faq/give/visit), and image slots. `SiteImage.role` assigns hero/service/gallery/about/atmosphere. Content gains testimonials/FAQ/team + goal-driven CTAs (no "Learn more"). Post-render `critiqueBuild` + one `applyCritiqueFixes` pass; non-blocking design checks in `quality.ts`. Font pairings drop Inter as body.
 - **Consequences:** Spec JSON grows (`composition`, richer `content`). Demos may invent social proof; client builds only use sourced testimonials/FAQ/team. OpenRouter gap-fill follows recipe slots. Lighthouse 90+ structural gate unchanged.
+
+## ADR-0021 — Distinct aesthetic layout blueprints
+
+- **Status:** Accepted (2026-07-11)
+- **Context:** The six composition recipes shared too-similar visual DNA for sales demos. Prospects need unmistakably different professional layouts; new sites should inherit the same distinctiveness.
+- **Decision:** Keep recipe IDs stable. Rewrite each `layouts/*` renderer + `themes/base.ts` blueprint so each recipe owns a distinct aesthetic: Barely There (`editorial-luxury`), Bento + Tactile (`warm-hospitality`), Kinetic Typography (`reverent-sanctuary`), Conversion Journey (`clean-clinic`), Deep Mono + Neon (`craft-trade`), Dynamic Type (`mission-ledger`). Demo catalog seeds force `recipeId`; `generateBuild` accepts `{ themeId, recipeId }`. Shared micro-reveal motion + expanded font/signature pools apply to all new builds.
+- **Consequences:** Regenerated demos look structurally different. Old preview builds keep prior HTML until regenerated. Tests assert new CSS markers (`sf-hero--barely`, `sf-kinetic`, `sf-journey`, `sf-hero--neon`, etc.).

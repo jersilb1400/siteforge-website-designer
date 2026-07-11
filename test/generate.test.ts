@@ -147,9 +147,9 @@ describe('multi-page render', () => {
     const home = files['index.html']!;
     expect(home).toContain('href="services.html"');
     expect(home).not.toMatch(/href="#services"/);
-    // editorial-luxury recipe renders spread layout instead of card teasers
-    expect(home).toContain('sf-editorial-spread');
-    expect(home).toContain('sf-hero--editorial-panel');
+    // editorial-luxury (Barely There) — brand-first hero, sparse service rows
+    expect(home).toContain('sf-hero--barely');
+    expect(home).toContain('sf-barely-row');
     expect(home).toContain('Book your ritual');
     expect(home).not.toContain('>Learn more<');
     expect(home).toContain('sf-testimonials');

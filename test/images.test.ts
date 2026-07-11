@@ -6,6 +6,7 @@ import { selectRecipe, RECIPES } from '../src/generate/composition';
 import { applyCritiqueFixes, critiqueBuild } from '../src/generate/critique';
 import type { SiteSpec } from '../src/generate/spec';
 import { resolvePalette } from '../src/generate/palette';
+import { getDemoSeed } from '../src/generate/demo/catalog';
 
 describe('image prompt pack', () => {
   it('builds hero-first prompts capped at the requested count', () => {
@@ -64,6 +65,14 @@ describe('composition recipes', () => {
   it('has six curated recipes with image slots', () => {
     expect(RECIPES).toHaveLength(6);
     expect(RECIPES.every((r) => r.imageSlots.length >= 6)).toBe(true);
+  });
+
+  it('demo seeds pin a recipeId for structural uniqueness', () => {
+    expect(getDemoSeed('Day spa / Salon')!.recipeId).toBe('editorial-luxury');
+    expect(getDemoSeed('Church / Ministry')!.recipeId).toBe('reverent-sanctuary');
+    expect(getDemoSeed('Restaurant / Cafe')!.recipeId).toBe('warm-hospitality');
+    expect(getDemoSeed('Home & trade services')!.recipeId).toBe('craft-trade');
+    expect(getDemoSeed('Professional services (law, accounting, consulting)')!.recipeId).toBe('clean-clinic');
   });
 });
 

@@ -74,6 +74,7 @@ describe('demo catalog', () => {
     const seed = getDemoSeed('Day spa / Salon')!;
     const data = buildDemoSourceData({ businessName: 'Aura Day Spa', industry: 'Day spa / Salon' }, seed);
     expect(data.demo).toBe(true);
+    expect(data.recipeId).toBe('editorial-luxury');
     expect(data.services[0]!.name).toBe('Signature Facial');
     expect(data.headings).toContain('Hot Stone Massage');
   });

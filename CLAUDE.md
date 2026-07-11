@@ -17,8 +17,9 @@ infrastructure. Single operator (Jeremy) for v1.
 Phases 0–4 are **production verified**. Phase 5 MCP + forge operator chrome shipped;
 custom domains / multi-tenant / billing remain escalation-gated.
 
-Generation quality bar (ADR-0020):
-- **8 themes** + **6 composition recipes** (industry-native layouts, not reskins)
+Generation quality bar (ADR-0020 + ADR-0021):
+- **8 themes** + **6 composition recipes** with distinct aesthetic blueprints
+  (Barely There, Kinetic Type, Bento-Tactile, Neon Mono, Conversion Journey, Dynamic Type)
 - Multi-page sites (home / about / services / gallery / contact + team / faq / give / visit)
 - OpenRouter FLUX.2 Klein 4B art-directed photos; client logo/photo uploads
 - Conversion copy + design critique fix pass; Lighthouse 90+ gate

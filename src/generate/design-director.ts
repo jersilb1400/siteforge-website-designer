@@ -57,6 +57,26 @@ export const FONT_PAIRINGS: Record<string, FontPairing> = {
     body: `'Karla', system-ui, sans-serif`,
     href: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Karla:wght@400;500;600&display=swap',
   },
+  kinetic: {
+    display: `'Bebas Neue', Impact, sans-serif`,
+    body: `'Manrope', system-ui, sans-serif`,
+    href: 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700&display=swap',
+  },
+  neon: {
+    display: `'Archivo Black', system-ui, sans-serif`,
+    body: `'IBM Plex Sans', system-ui, sans-serif`,
+    href: 'https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600&display=swap',
+  },
+  barely: {
+    display: `'Instrument Serif', Georgia, serif`,
+    body: `'DM Sans', system-ui, sans-serif`,
+    href: 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap',
+  },
+  conversion: {
+    display: `'Literata', Georgia, serif`,
+    body: `'Sora', system-ui, sans-serif`,
+    href: 'https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600&display=swap',
+  },
 };
 
 export const SIGNATURES: Record<string, string> = {
@@ -67,7 +87,10 @@ export const SIGNATURES: Record<string, string> = {
   'framed-cards': `.sf-service{border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--accent)}`,
   'wide-eyebrow': `.sf-eyebrow{font-size:.9rem;letter-spacing:.24em}`,
   'ticker-nav': `.sf-header{border-bottom:2px solid var(--ink)}.sf-brand{text-transform:uppercase;letter-spacing:.02em}`,
-  'soft-rise': `.sf-hero-body{animation:sf-rise .9s cubic-bezier(.22,1,.36,1) both}@keyframes sf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}`,
+  'soft-rise': `.sf-hero-body,.sf-barely-body,.sf-kinetic-body,.sf-neon-body{animation:sf-rise .9s cubic-bezier(.22,1,.36,1) both}@keyframes sf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}`,
+  'whisper-nav': `.sf-header{background:transparent;border-bottom:0;backdrop-filter:none}.sf-nav a{font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;opacity:.55}.sf-nav a:hover,.sf-nav a.is-active{opacity:1}`,
+  'neon-glow': `.sf-btn--primary{box-shadow:0 0 28px color-mix(in srgb,var(--accent) 40%,transparent)}.sf-eyebrow{text-shadow:0 0 10px color-mix(in srgb,var(--accent) 35%,transparent)}`,
+  'stagger-sections': `.sf-section:nth-child(odd){animation:sf-reveal-up .8s cubic-bezier(.22,1,.36,1) both}`,
 };
 
 export interface DesignResolved {
@@ -123,6 +146,7 @@ export interface Brief {
   tone: string;
   story: string;
   demo?: boolean;
+  recipeOverride?: string;
 }
 
 /**
@@ -134,6 +158,7 @@ export async function deriveDesign(env: Env, brief: Brief, baseTheme: Theme): Pr
     industry: brief.industry,
     tone: brief.tone,
     themeId: baseTheme.id,
+    recipeOverride: brief.recipeOverride,
   });
 
   if (!env.ANTHROPIC_API_KEY) {
@@ -171,11 +196,12 @@ export async function deriveDesign(env: Env, brief: Brief, baseTheme: Theme): Pr
           content:
             `Business: ${brief.name}\nIndustry: ${brief.industry}\nTone: ${brief.tone}\n` +
             `Story: ${brief.story.slice(0, 500)}\nBase layout theme: ${baseTheme.name} (${baseTheme.id})\n` +
-            `Demo: ${brief.demo ? 'yes' : 'no'}\n\n` +
-            `Choose a visual identity as JSON:\n` +
+            `Demo: ${brief.demo ? 'yes' : 'no'}\n` +
+            (brief.recipeOverride ? `Forced recipeId: ${brief.recipeOverride} (must use this)\n` : '') +
+            `\nChoose a visual identity as JSON:\n` +
             `- fontPairing: one of [${Object.keys(FONT_PAIRINGS).join(', ')}]\n` +
             `- signature: one of [${Object.keys(SIGNATURES).join(', ')}]\n` +
-            `- recipeId: one of [editorial-luxury, warm-hospitality, reverent-sanctuary, clean-clinic, craft-trade, mission-ledger] (match industry)\n` +
+            `- recipeId: one of [editorial-luxury, warm-hospitality, reverent-sanctuary, clean-clinic, craft-trade, mission-ledger] (match industry${brief.recipeOverride ? `; use ${brief.recipeOverride}` : ''})\n` +
             `- brand: a #hex brand color that suits this business\n` +
             `- accent: a complementary #hex accent\n` +
             `- rationale: one sentence on why these fit the brief\n` +
@@ -185,6 +211,7 @@ export async function deriveDesign(env: Env, brief: Brief, baseTheme: Theme): Pr
     });
     return resolveDesign({
       ...pick,
+      recipeId: brief.recipeOverride || pick.recipeId,
       industry: brief.industry,
       tone: brief.tone,
       themeId: baseTheme.id,

@@ -66,10 +66,21 @@
   </style>
 </head>
 <body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="/#home"><span class="mark">SF</span> SiteForge</a>
+      <nav class="site-nav" aria-label="Workshop">
+        <a href="/#home" data-nav="home">Home</a>
+        <a href="/#projects" data-nav="projects">Projects</a>
+        <a href="/#demos" data-nav="demos">Demos</a>
+        <a href="/how-to.html" data-nav="guide" aria-current="page" class="is-active">Guide</a>
+      </nav>
+    </div>
+  </header>
+
   <div class="forge-howto-hero" aria-hidden="true">
     <img src="/images/forge-metal.jpg" alt="" width="1600" height="1067" fetchpriority="high" />
     <div class="forge-howto-copy howto" style="padding-bottom:0;">
-      <div class="brand" style="margin-bottom:1.25rem;"><span class="mark">SF</span> SiteForge</div>
       <div class="eyebrow">how it works</div>
       <h1 style="margin:.55rem 0 .65rem;">Forge a website in five strikes</h1>
       <p class="lede" style="color:var(--ash-soft);">SiteForge turns a short conversation into a finished, professional site. Here is the whole journey — from cold iron to live metal.</p>
@@ -124,7 +135,10 @@
       </li>
     </ol>
 
-    <div class="howto-foot"><span>SiteForge · how it works</span><span>forged on Cloudflare</span></div>
+    <div class="howto-foot">
+      <span>SiteForge · how it works</span>
+      <span><a href="/#projects" style="color:inherit;">Open projects</a> · <a href="/#demos" style="color:inherit;">Forge a demo</a></span>
+    </div>
   </main>
 </body>
 </html>

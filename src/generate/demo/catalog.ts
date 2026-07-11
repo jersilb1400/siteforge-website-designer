@@ -13,6 +13,8 @@ export interface DemoService {
 export interface DemoIndustrySeed {
   industry: string;
   themeId: string;
+  /** Force a composition recipe so demos stay structurally distinct. */
+  recipeId: string;
   tone: string;
   goals: string[];
   pages: string[];
@@ -45,6 +47,7 @@ export type DemoAnswers = Record<string, string | string[] | boolean>;
 const SPA: DemoIndustrySeed = {
   industry: 'Day spa / Salon',
   themeId: 'haven',
+  recipeId: 'editorial-luxury',
   tone: 'Warm',
   goals: ['Take bookings or appointments', 'Share information & build trust', 'Generate leads / inquiries'],
   pages: pagesForIndustry('Day spa / Salon'),
@@ -70,6 +73,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Church / Ministry',
     themeId: 'sanctuary',
+    recipeId: 'reverent-sanctuary',
     tone: 'Warm',
     goals: ['Share information & build trust', 'Promote events', 'Collect donations'],
     pages: pagesForIndustry('Church / Ministry'),
@@ -91,6 +95,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Restaurant / Cafe',
     themeId: 'storefront',
+    recipeId: 'warm-hospitality',
     tone: 'Bold',
     goals: ['Share information & build trust', 'Generate leads / inquiries', 'Promote events'],
     pages: pagesForIndustry('Restaurant / Cafe'),
@@ -112,6 +117,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Professional services (law, accounting, consulting)',
     themeId: 'atelier',
+    recipeId: 'clean-clinic',
     tone: 'Professional',
     goals: ['Generate leads / inquiries', 'Share information & build trust'],
     pages: pagesForIndustry('Professional services (law, accounting, consulting)'),
@@ -133,6 +139,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Health & wellness',
     themeId: 'meridian',
+    recipeId: 'clean-clinic',
     tone: 'Warm',
     goals: ['Take bookings or appointments', 'Share information & build trust'],
     pages: pagesForIndustry('Health & wellness'),
@@ -154,6 +161,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Home & trade services',
     themeId: 'forge',
+    recipeId: 'craft-trade',
     tone: 'Bold',
     goals: ['Generate leads / inquiries', 'Take bookings or appointments'],
     pages: pagesForIndustry('Home & trade services'),
@@ -175,6 +183,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Retail / shop',
     themeId: 'storefront',
+    recipeId: 'warm-hospitality',
     tone: 'Bold',
     goals: ['Sell a few products (e-commerce-lite)', 'Share information & build trust'],
     pages: pagesForIndustry('Retail / shop'),
@@ -196,6 +205,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Nonprofit',
     themeId: 'ledger',
+    recipeId: 'mission-ledger',
     tone: 'Professional',
     goals: ['Collect donations', 'Share information & build trust', 'Grow an email list'],
     pages: pagesForIndustry('Nonprofit'),
@@ -217,6 +227,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Personal brand / portfolio',
     themeId: 'gallery',
+    recipeId: 'mission-ledger',
     tone: 'Minimal',
     goals: ['Generate leads / inquiries', 'Share information & build trust'],
     pages: pagesForIndustry('Personal brand / portfolio'),
@@ -238,6 +249,7 @@ const SEEDS: DemoIndustrySeed[] = [
   {
     industry: 'Other',
     themeId: 'atelier',
+    recipeId: 'editorial-luxury',
     tone: 'Professional',
     goals: ['Generate leads / inquiries', 'Share information & build trust'],
     pages: pagesForIndustry('Other'),
@@ -326,5 +338,6 @@ export function buildDemoSourceData(brief: DemoBrief, seed: DemoIndustrySeed) {
     ctaLabel: seed.ctaLabel,
     palette: seed.brandColors.split(/\s+/).filter(Boolean),
     demo: true,
+    recipeId: seed.recipeId,
   };
 }

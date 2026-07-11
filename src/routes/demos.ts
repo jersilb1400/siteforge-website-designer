@@ -113,7 +113,10 @@ demos.post('/', async (c) => {
   }
 
   const themeOverride = brief.themeId || seed.themeId;
-  const result = await generateBuild(c.env, projectId, themeOverride);
+  const result = await generateBuild(c.env, projectId, {
+    themeId: themeOverride,
+    recipeId: seed.recipeId,
+  });
 
   return c.json(
     {

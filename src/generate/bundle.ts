@@ -37,6 +37,7 @@ function mergeConfirmed(rows: SourceRow[]) {
     highlights?: string[];
     ctaLabel?: string;
     demo?: boolean;
+    recipeId?: string;
     testimonials?: Array<{ quote: string; attribution: string }>;
     faq?: Array<{ q: string; a: string }>;
     team?: Array<{ name: string; role: string; bio?: string }>;
@@ -58,6 +59,7 @@ function mergeConfirmed(rows: SourceRow[]) {
     if (!out.highlights && Array.isArray(d.highlights)) out.highlights = d.highlights;
     out.ctaLabel ??= d.ctaLabel;
     if (d.demo) out.demo = true;
+    out.recipeId ??= typeof d.recipeId === 'string' ? d.recipeId : undefined;
     if (!out.testimonials && Array.isArray(d.testimonials)) out.testimonials = d.testimonials;
     if (!out.faq && Array.isArray(d.faq)) out.faq = d.faq;
     if (!out.team && Array.isArray(d.team)) out.team = d.team;
@@ -115,7 +117,19 @@ function assignRoles(images: SiteImage[], sourceRoles: Array<ImageRole | undefin
   return out;
 }
 
-export async function assembleSpec(env: Env, projectId: string, themeOverride?: string): Promise<SiteSpec> {
+export interface GenerateOptions {
+  themeId?: string;
+  recipeId?: string;
+}
+
+function normalizeGenerateOpts(opts?: string | GenerateOptions): GenerateOptions {
+  if (!opts) return {};
+  if (typeof opts === 'string') return { themeId: opts };
+  return opts;
+}
+
+export async function assembleSpec(env: Env, projectId: string, opts?: string | GenerateOptions): Promise<SiteSpec> {
+  const options = normalizeGenerateOpts(opts);
   const session = await one<{ id: string }>(
     env,
     'SELECT id FROM interview_sessions WHERE project_id = ? ORDER BY created_at DESC LIMIT 1',
@@ -137,9 +151,11 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
   );
   const { merged } = mergeConfirmed(sourceRows);
 
+  const themeOverride = options.themeId;
   if (themeOverride && !themeExists(themeOverride)) throw new BadRequest(`Unknown themeId "${themeOverride}".`);
   const theme = themeOverride ? getTheme(themeOverride) : selectTheme(profile.business.industry, profile.tone);
 
+  const recipeOverride = options.recipeId || merged.recipeId;
   const design = await deriveDesign(
     env,
     {
@@ -148,6 +164,7 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
       tone: profile.tone,
       story: profile.business.story,
       demo: !!merged.demo,
+      recipeOverride,
     },
     theme,
   );
@@ -158,6 +175,7 @@ export async function assembleSpec(env: Env, projectId: string, themeOverride?: 
         industry: profile.business.industry,
         tone: profile.tone,
         themeId: theme.id,
+        recipeOverride,
       });
   const composition = design?.composition ?? resolveComposition(recipe);
 
@@ -332,9 +350,9 @@ async function reserveBuild(env: Env, projectId: string, buildId: string): Promi
   throw new BadRequest('Could not reserve a build version; please retry.');
 }
 
-export async function generateBuild(env: Env, projectId: string, themeOverride?: string): Promise<BuildResult> {
+export async function generateBuild(env: Env, projectId: string, opts?: string | GenerateOptions): Promise<BuildResult> {
   await requireProject(env, projectId);
-  const spec = await assembleSpec(env, projectId, themeOverride);
+  const spec = await assembleSpec(env, projectId, opts);
   const recipe = getRecipe(spec.composition?.recipeId);
   await ensureProjectPhotos(
     env,

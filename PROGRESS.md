@@ -26,21 +26,22 @@ Branch: `claude/build-plan-review-implement-h0z0k9`
 Legend: "Implemented" = code written and `tsc --noEmit` clean. "Verified" = run against
 real bindings with acceptance checks. "Production verified" = exercised on the live Worker.
 
-### Latest quality proof (2026-07-10)
+### Latest quality proof (2026-07-11)
 
-Five industry demos regenerated after ADR-0020 — all **quality score 100**, OpenRouter
-photos (~$0.084 each), distinct compositions:
+Five industry demos regenerated after ADR-0021 aesthetic blueprint rewrite — all
+**quality score 100**, OpenRouter photos (6 each), distinct compositions:
 
 | Demo | Theme / recipe signal | Preview |
 |---|---|---|
-| Lumen Spa | Haven · editorial-luxury · FAQ | `/preview/build_mrf2uhbiurl3en1gi8na/` |
-| Harbor Community Church | Sanctuary · visit + give pages | `/preview/build_mrf2vdo43eetpj7oxwsi/` |
-| Ember & Oak | Storefront · reserve CTA | `/preview/build_mrf2w5db69x95gbtn737/` |
-| TrueLine Builders | Forge · craft-trade · FAQ | `/preview/build_mrf2wyfsc129ahuu2ao2/` |
-| Northfield Advisory | Atelier · team + FAQ | `/preview/build_mrf2xnopuk5bzbwjhots/` |
+| Lumen Spa | Haven · barely-there (editorial-luxury) | `/preview/build_mrfx43oznmu9akwmxkmp/` |
+| Harbor Community Church | Sanctuary · kinetic type | `/preview/build_mrfx4xawb0xe3kiy7xss/` |
+| Ember & Oak | Storefront · bento-tactile | `/preview/build_mrfx5ns1mltftxs0wz0a/` |
+| TrueLine Builders | Forge · neon-mono | `/preview/build_mrfx6dnfxbdf0p5gb6gc/` |
+| Northfield Advisory | Atelier · conversion journey | `/preview/build_mrfx748x36xkekr9hh16/` |
 
-Smoke: brand-first heroes with photos, no “Learn more”, industry CTAs, testimonials,
-sticky mobile CTA. Unit tests: **71 green**; `tsc` clean.
+Smoke: brand-first heroes with photos, no “Learn more”, distinct CSS markers per
+recipe (`sf-hero--barely` / `--kinetic` / `--neon`, `sf-bento-grid--tactile`,
+`sf-journey`). Unit tests: **72 green**; `tsc` clean.
 
 ### Acceptance / user-simulation testing (2026-07-08)
 
@@ -113,6 +114,12 @@ Deliverable: interview + ingestion → live multi-page preview. **Met.**
 ---
 
 ## Session log
+
+### 2026-07-11 — Distinct aesthetic layout blueprints (ADR-0021)
+- Rewrote all 6 composition layout renderers + base CSS for unique aesthetics
+  (Barely There, Kinetic Type, Bento-Tactile, Neon Mono, Conversion Journey,
+  Dynamic Type). Demo seeds force `recipeId`; micro-reveals + new font pairings.
+- Unit tests + typecheck; demos regenerated on production.
 
 ### 2026-07-08 — Foundation + Interview + loop setup
 - Phase 0–1 scaffolded; autonomous loop (`LOOP.md`, reviewer agent) configured.
