@@ -3,6 +3,7 @@ import type { SiteSpec, SiteImage, SectionSpec } from './spec';
 import { contactHref, hrefFor, imgByRole, imgsByRole } from './spec';
 import type { Theme } from './themes/types';
 import type { HeroMode } from './composition/types';
+import { getLayoutRenderer } from './layouts/index';
 
 // Semantic, accessible HTML builders shared by every theme. Themes style the
 // stable `sf-` class names. Multi-page: each nav item is its own HTML file;
@@ -480,6 +481,12 @@ ${ogImg ? `<meta property="og:image" content="${attr(safeHref(ogImg.src))}" />` 
 }
 
 function pageMain(spec: SiteSpec, theme: Theme, pageId: string): string {
+  const layoutVariant = spec.composition?.layoutVariant;
+  if (layoutVariant && (pageId === 'home' || pageId === 'services')) {
+    const renderer = getLayoutRenderer(layoutVariant);
+    if (pageId === 'home') return renderer.homeContent(spec, theme);
+    if (pageId === 'services') return renderer.servicesContent(spec, theme);
+  }
   switch (pageId) {
     case 'home':
       return homeHero(spec, theme) + '\n' + homeTeasers(spec);

@@ -94,6 +94,7 @@ describe('multi-page render', () => {
       themeId: 'haven',
       composition: {
         recipeId: 'editorial-luxury',
+        layoutVariant: 'editorial-luxury',
         hero: 'full-bleed',
         brandFirst: true,
         homeTeasers: ['services', 'testimonials', 'about', 'gallery'],
@@ -146,8 +147,9 @@ describe('multi-page render', () => {
     const home = files['index.html']!;
     expect(home).toContain('href="services.html"');
     expect(home).not.toMatch(/href="#services"/);
-    expect(home).toContain('sf-teasers');
-    expect(home).toContain('sf-hero--has-photo');
+    // editorial-luxury recipe renders spread layout instead of card teasers
+    expect(home).toContain('sf-editorial-spread');
+    expect(home).toContain('sf-hero--editorial-panel');
     expect(home).toContain('Book your ritual');
     expect(home).not.toContain('>Learn more<');
     expect(home).toContain('sf-testimonials');
