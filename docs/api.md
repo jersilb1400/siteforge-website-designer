@@ -40,16 +40,17 @@ Liveness ping. No auth. Touches nothing.
 ```
 
 ### GET /api/ready
-Readiness. No auth. Actually exercises D1 (`SELECT 1`) and KV (a `get`), and checks
-that the Anthropic secret is present. Returns `200` when all checks pass, `503`
+Readiness. No auth. Exercises D1 (`SELECT 1`) and KV (a `get`), and checks that
+`ANTHROPIC_API_KEY` is present. Also reports `openrouter` (`ok` when
+`OPENROUTER_API_KEY` is set) but does **not** fail readiness when it is missing
+(Unsplash fallback still works). Returns `200` when required checks pass, `503`
 otherwise.
 
 ```json
-{ "ok": true, "checks": { "d1": "ok", "kv": "ok", "anthropic": "ok" } }
+{ "ok": true, "checks": { "d1": "ok", "kv": "ok", "anthropic": "ok", "openrouter": "ok" } }
 ```
 
-Each check is `"ok"` or `"error"`; `anthropic` is `"error"` when `ANTHROPIC_API_KEY`
-is unset.
+Each check is `"ok"` or `"error"`.
 
 ---
 
@@ -107,6 +108,51 @@ and an interview progress snapshot. `404 not_found` if the project doesn't exist
 
 `session` and `interviewProgress` are `null` if no session exists yet.
 
+### DELETE /api/projects/:id
+Permanently delete a project (including sales demos). Removes R2 objects under
+`builds/{buildId}/` and `projects/{projectId}/`, then deletes the D1 project row
+(CASCADE clears sessions, answers, source_content, assets, builds, job_log). If
+the client has no remaining projects, the client row is removed too.
+
+Response `200`:
+
+```json
+{ "ok": true, "deleted": { "projectId": "proj_…", "name": "…", "r2Objects": 12, "clientDeleted": true } }
+```
+
+`404 not_found` if the project doesn't exist.
+
+### POST /api/projects/:id/uploads
+Upload client-provided logo or photos (multipart form). Operator-gated. Files are
+stored in R2 and indexed as **confirmed** assets (operator is the ethics gate for
+customer-supplied media). Logos replace any prior logo for the project.
+
+Form fields:
+
+- `kind` — `logo` or `photo` (default `photo`)
+- `file` / `files` — one or more image files (JPEG, PNG, WebP, GIF; SVG for logos only)
+- `alt` — optional alt text
+
+Limits: logo ≤ 2 MB (one file); photos ≤ 8 MB each, ≤ 12 files per request.
+
+Response `201`:
+
+```json
+{
+  "count": 2,
+  "uploaded": [
+    { "id": "asset_…", "kind": "image", "mimeType": "image/jpeg", "bytes": 240112,
+      "altText": "…", "previewUrl": "/api/assets/asset_…/file", "reviewStatus": "confirmed" }
+  ]
+}
+```
+
+Regenerate the project preview to bake uploads into the site (logo → nav;
+photos preferred for hero/gallery over scraped/stock).
+
+### GET /api/assets/:id/file
+Stream an asset's bytes from R2 (dashboard thumbnails). Operator-gated.
+
 ---
 
 ## Interview (session-id gated)
@@ -123,6 +169,8 @@ Current interview state: progress plus the next question to ask (or completion).
   "status": "active",
   "progress": { "answered": 3, "total": 18 },
   "complete": false,
+  "canGoBack": true,
+  "isLast": false,
   "question": {
     "id": "story", "phase": "basics", "text": "Tell the story…", "help": "…",
     "type": "longtext", "options": null, "placeholder": null, "required": true,
@@ -135,6 +183,13 @@ When the interview is finished, `complete` is `true`, `status` is `"complete"`, 
 `question` is `null`. For the `pages` question, `options` is resolved dynamically
 (industry-aware, via the cheap model, falling back to static defaults) and
 `defaultValue` pre-selects the suggested pages.
+
+- `canGoBack` — `true` once at least one answer has been recorded for this
+  session (i.e. there's something for `POST /back` to undo). `false` on the
+  first question, so the client can hide/disable its Back button with no error.
+- `isLast` — `true` when the returned `question` is the only visible question
+  left to answer; the client uses this to label its primary button **Finish**
+  instead of **Continue**.
 
 ### POST /api/interview/:sessionId/answer
 Submit an answer, persist it (upsert on `session_id + question_id`), advance, and
@@ -157,8 +212,12 @@ Response `200`:
 {
   "saved": true,
   "followUp": null,
+  "sessionId": "sess_…",
+  "status": "active",
   "progress": { "answered": 4, "total": 18 },
   "complete": false,
+  "canGoBack": true,
+  "isLast": false,
   "question": { "id": "goals", "phase": "goals", "…": "…" }
 }
 ```
@@ -169,6 +228,35 @@ Response `200`:
 - Answering the **last** question sets `complete: true`, `question: null`, flips the
   session to `complete`, and advances the project from `interview` to `ingesting`
   (caching `industry` and `tone` onto the project).
+
+### POST /api/interview/:sessionId/back
+Undo the most recently answered question and step back to it — the client's Back
+button. No request body.
+
+- Deletes the most-recently-updated `interview_answers` row for the session
+  (`ORDER BY updated_at DESC LIMIT 1`).
+- `400 bad_request` ("Nothing to go back to.") if the session has no answers yet
+  (i.e. `canGoBack` was `false`).
+- If the session was `complete`, it's reopened to `active` (and the project is
+  stepped back from `ingesting` to `interview`, but only if nothing beyond the
+  interview has started).
+- Recomputes the next question from the remaining answers and updates the
+  session's `next_question_id`/`phase` accordingly.
+
+Response `200` — same shape as `GET /api/interview/:sessionId`, with `question`
+set to the one whose answer was just removed:
+
+```json
+{
+  "sessionId": "sess_…",
+  "status": "active",
+  "progress": { "answered": 3, "total": 18 },
+  "complete": false,
+  "canGoBack": true,
+  "isLast": false,
+  "question": { "id": "story", "phase": "basics", "…": "…" }
+}
+```
 
 ### GET /api/interview/:sessionId/profile
 The structured `SiteProfile` — the Phase 1 deliverable. Readable any time (partial
@@ -195,3 +283,62 @@ before completion) so the review UI can show progress.
 `pages` falls back to the industry default set when the client hasn't chosen any;
 `brand.generatePalette` is inferred true when colors are blank or the client asked
 for a generated palette.
+
+---
+
+## Sales demos (operator only)
+
+One-click sample sites for pitching prospects. Creates a real project seeded with
+synthetic interview answers + confirmed catalog content, then runs the normal
+generate pipeline. No live interview required.
+
+### GET /api/demos/industries
+List industries the demo catalog supports (with default theme id/name).
+
+```json
+{ "industries": [ { "industry": "Day spa / Salon", "themeId": "haven", "themeName": "Haven" }, … ] }
+```
+
+### POST /api/demos
+Build a demo site from a short brief.
+
+Request body:
+
+```json
+{
+  "businessName": "Aura Day Spa",
+  "industry": "Day spa / Salon",
+  "tagline": "optional",
+  "blurb": "optional short about",
+  "phone": "optional",
+  "email": "optional",
+  "city": "optional",
+  "logoUrl": "optional https URL",
+  "themeId": "optional override"
+}
+```
+
+- `businessName` and `industry` are required (`400` if missing/unknown).
+- Optional `logoUrl` is fetched, stored in R2, and auto-confirmed as a logo asset.
+- Photos: OpenRouter FLUX.2 Klein 4B gap-fills to ~6 images when
+  `OPENROUTER_API_KEY` is set; otherwise Unsplash industry packs. Client uploads
+  always win over AI/stock.
+- Project is named `Demo — {businessName}` and appears in the normal project list.
+
+Response `201`:
+
+```json
+{
+  "projectId": "proj_…",
+  "clientId": "client_…",
+  "buildId": "build_…",
+  "version": 1,
+  "themeId": "haven",
+  "previewUrl": "/preview/build_…/",
+  "siteUrl": "/site/proj_…/",
+  "quality": { "score": 100, "pass": true },
+  "photoCount": 6,
+  "photos": { "generated": 6, "stock": 0, "total": 6, "costUsd": 0.08, "source": "openrouter" },
+  "demo": true
+}
+```

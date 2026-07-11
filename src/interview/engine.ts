@@ -59,6 +59,37 @@ export function progress(a: Answers): { answered: number; total: number } {
 }
 
 /**
+ * The non-network parts of interview state: whether we're done, whether Back
+ * has anywhere to go, and whether the upcoming question is the last one (so
+ * the client can label its primary button "Finish" rather than "Continue").
+ * Kept pure/DB-free so it's directly unit-testable; routes layer the async
+ * `presentQuestion` (dynamic options) on top of `question`.
+ */
+export interface InterviewState {
+  status: string;
+  progress: { answered: number; total: number };
+  complete: boolean;
+  canGoBack: boolean;
+  isLast: boolean;
+  question: Question | null;
+}
+
+export function computeInterviewState(a: Answers, sessionStatus: string): InterviewState {
+  const q = nextQuestion(a);
+  const p = progress(a);
+  return {
+    status: q ? sessionStatus : 'complete',
+    progress: p,
+    complete: q === null,
+    // Any stored answer row means there's somewhere for Back to go; on the
+    // first question (no answers yet) it stays disabled/hidden client-side.
+    canGoBack: Object.keys(a).length > 0,
+    isLast: q !== null && p.answered >= p.total - 1,
+    question: q,
+  };
+}
+
+/**
  * Resolve dynamic options for a question (currently: industry page ideas).
  * Uses the cheap model to tailor the default list to the specific business,
  * falling back to the static industry defaults on any error.

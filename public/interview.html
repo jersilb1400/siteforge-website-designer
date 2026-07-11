@@ -6,27 +6,32 @@
   <title>SiteForge — Interview</title>
   <meta name="description" content="Tell us about your business and SiteForge will forge your website." />
   <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0b0a09" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="wrap">
-      <div class="brand"><span class="mark">SF</span> SiteForge</div>
+      <a class="brand" href="/"><span class="mark">SF</span> SiteForge</a>
       <span class="step-counter" id="counter" aria-hidden="true"></span>
     </div>
   </header>
 
-  <main class="wrap" style="max-width: 720px; padding-top: 2.5rem; padding-bottom: 3rem;">
-    <div class="rail" aria-hidden="true" style="margin-bottom: 2rem;"><span id="rail"></span></div>
+  <main class="wrap interview-main" style="max-width: 720px; padding-top: 2.75rem; padding-bottom: 3.5rem;">
+    <div class="forge-workshop-hero" style="height:7.5rem;margin-bottom:1.5rem;" aria-hidden="true">
+      <img src="/images/forge-hammer.jpg" alt="" width="1600" height="900" loading="eager" />
+      <div class="forge-workshop-hero-scrim"></div>
+    </div>
+    <div class="rail" aria-hidden="true" style="margin-bottom: 2.25rem;"><span id="rail"></span></div>
 
     <!-- loading -->
-    <div id="loading" class="card center">
+    <div id="loading" class="card center rise">
       <span class="spinner"></span>
-      <p class="muted" style="margin-top: 0.75rem;">Loading your interview…</p>
+      <p class="muted" style="margin-top: 0.85rem;">Heating the forge…</p>
     </div>
 
     <!-- question -->
@@ -38,7 +43,7 @@
     <p id="fatal" class="notice hidden" role="alert"></p>
   </main>
 
-  <footer class="foot"><div class="wrap">SiteForge · interview engine · your answers save automatically</div></footer>
+  <footer class="foot"><div class="wrap">SiteForge · interview · answers save as you go</div></footer>
 
   <script src="/interview.js"></script>
 </body>

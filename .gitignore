@@ -24,3 +24,7 @@ npm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# AI assistant artifacts
+context-snapshot.json
+session-log.md

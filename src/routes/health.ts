@@ -35,7 +35,11 @@ health.get('/ready', async (c) => {
   }
 
   checks.anthropic = c.env.ANTHROPIC_API_KEY ? 'ok' : 'error';
+  // OpenRouter is optional — demos fall back to Unsplash when unset.
+  checks.openrouter = c.env.OPENROUTER_API_KEY ? 'ok' : 'error';
 
-  const ok = Object.values(checks).every((v) => v === 'ok');
+  // Ready requires D1 + KV + Anthropic; OpenRouter absence is reported but not fatal.
+  const required = ['d1', 'kv', 'anthropic'] as const;
+  const ok = required.every((k) => checks[k] === 'ok');
   return c.json({ ok, checks }, ok ? 200 : 503);
 });

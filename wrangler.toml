@@ -24,13 +24,13 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "siteforge-db"
-database_id = "PLACEHOLDER_D1_DATABASE_ID"
+database_id = "ffbe721f-ccaa-47ef-b701-144de8c886e8"
 migrations_dir = "migrations"
 
 # --- KV: sessions, scrape cache, rate limiting ---
 [[kv_namespaces]]
 binding = "KV"
-id = "PLACEHOLDER_KV_NAMESPACE_ID"
+id = "fad0d34f51d2489c96c9ccd0ff9f58c8"
 
 # --- R2: site bundles, scraped assets, images, versioned backups ---
 [[r2_buckets]]
@@ -57,13 +57,21 @@ binding = "AI"
 [browser]
 binding = "BROWSER"
 
+# Deployed Workers report "production" (this hides the dev-only /__fixtures/*
+# routes and labels /api/health correctly). Local `wrangler dev` overrides this
+# to "development" via .dev.vars, which takes precedence over [vars].
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 # Non-secret model routing defaults; override per-environment as needed.
 ANTHROPIC_MODEL_SMART = "claude-sonnet-5"
 ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001"
+# OpenRouter image generation (FLUX.2 Klein 4B — cheapest high-quality FLUX tier).
+OPENROUTER_IMAGE_MODEL = "black-forest-labs/flux.2-klein-4b"
+# Scraping uses a plain-fetch renderer by default. Flip to "true" only after
+# wiring Browser Rendering (renderWithBrowser + paid plan). See src/ingest/render.ts.
+USE_BROWSER_RENDERING = "false"
 
 # Production environment overrides. Deploy with: wrangler deploy --env production
 [env.production]
 name = "siteforge-production"
-vars = { ENVIRONMENT = "production", ANTHROPIC_MODEL_SMART = "claude-sonnet-5", ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001" }
+vars = { ENVIRONMENT = "production", ANTHROPIC_MODEL_SMART = "claude-sonnet-5", ANTHROPIC_MODEL_CHEAP = "claude-haiku-4-5-20251001", OPENROUTER_IMAGE_MODEL = "black-forest-labs/flux.2-klein-4b" }

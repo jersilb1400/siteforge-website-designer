@@ -135,3 +135,93 @@ Number, Title, Status, Context, Decision, Consequences.
 - **Consequences:** Project knowledge is captured in files under version control
   instead of skill-managed structure. If those skills later become available,
   reconcile this layer with their conventions.
+
+## ADR-0012 — Interview Back + Finish UX
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Clients need to correct prior answers; completion felt abrupt with no Finish/Done CTA.
+- **Decision:** Add `POST /api/interview/:sessionId/back` (remove most-recent answer, re-present that question). Client shows Back when history exists; last-step CTA is Finish; completion screen has an explicit Done acknowledgment.
+- **Consequences:** Session can leave `complete` if user backs from a finished state only via operator reset later — Back is only available while `active` or by un-completing when deleting the last answer. Prefer: Back while active; on complete screen, Done closes the loop without mutating.
+
+## ADR-0013 — Premium demo design bar (Editorial Luxury)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** First spa demos were too simple to pitch prospects. Installed high-end-visual-design, ui-ux-pro-max, impeccable skills.
+- **Decision:** Haven (and demo-facing themes) target Editorial Luxury: brand-first full-bleed/centered hero, film-grain atmosphere, nested service treatments, springy motion, no Inter/Roboto as display. Still semantic HTML + inline CSS (no heavy client frameworks) for Lighthouse 90+.
+- **Consequences:** Richer CSS in themes; section HTML may gain optional demo-friendly hooks (e.g. atmosphere wrappers) without breaking existing themes.
+## ADR-0010 — Sales demos as real projects
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Operators need fast prospect pitches without a full interview.
+- **Decision:** `POST /api/demos` creates a real client/project named `Demo — {name}`, seeds interview answers + confirmed catalog `source_content`, then runs `generateBuild`.
+- **Consequences:** Demos appear in the dashboard with revise/publish; Day spa / Salon + Haven theme added.
+
+## ADR-0012 — Interview Back + Finish UX
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Clients need to correct prior answers; completion felt abrupt with no Finish/Done CTA.
+- **Decision:** Add `POST /api/interview/:sessionId/back` (delete most-recent answer by updated_at, re-present that question; if session was complete, set status back to active). Client shows Back when answers exist; last unanswered question's primary CTA is Finish; completion screen has explicit Done.
+- **Consequences:** Back can un-complete a session so the client can revise.
+
+## ADR-0013 — Premium demo design bar (Editorial Luxury)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** First spa demos were too simple to pitch. Installed high-end-visual-design, ui-ux-pro-max, impeccable (+ existing frontend-design).
+- **Decision:** Haven targets Editorial Luxury: brand-first hero, grain atmosphere, nested service shells, springy motion; still semantic HTML + inline CSS for Lighthouse 90+.
+- **Consequences:** Richer theme CSS; optional section hooks for atmosphere without breaking other themes.
+
+## ADR-0014 — context-architect now available
+
+- **Status:** Accepted (2026-07-09) — supersedes the "missing skill" part of ADR-0009
+- **Context:** `context-architect` is installed; `.context/` already existed in SiteForge layout.
+- **Decision:** Keep existing `.context/*` files; add VERIFY.md for task checks; append ADRs rather than renaming the whole tree to CONTEXT.md/DECISIONS.md.
+- **Consequences:** Dual naming (mission.md vs CONTEXT.md) is fine; VERIFY.md is the live check index.
+
+## ADR-0015 — SiteForge product UI: Blacksmith Forge theme
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Operator dashboard and interview needed a memorable brand surface that matches the "forge" metaphor and impresses clients walking the interview.
+- **Decision:** Dark industrial forge system in `public/styles.css`: charcoal iron, molten ember, brass stamps; Syne + Figtree + IBM Plex Mono; floating island topbar; double-bezel cards; heat-rail progress; film grain. Applied to index, interview, how-to, favicon.
+- **Consequences:** Generated client sites keep their own themes (Haven etc.); only SiteForge's operator/client interview chrome uses this system.
+
+## ADR-0016 — Demo imagery via curated Unsplash packs (not AI generation)
+
+- **Status:** Superseded by ADR-0019 (2026-07-09)
+- **Context:** Sales demos shipped text-only; prospects saw empty heroes/galleries. Workers AI FLUX is available but paid and slow for multi-image demos.
+- **Decision:** On `POST /api/demos`, fetch a curated industry photo pack from Unsplash CDN into R2 as confirmed assets before `generateBuild`. Centered heroes use full-bleed photo + scrim; gallery always renders when ≥1 image exists. Sanitize scraped taglines/hours; never use interview goals as service names.
+- **Consequences:** Demos look photographic without Anthropic/Workers AI image spend. Revisit FLUX generation if Jeremy approves paid image gen for bespoke client photos.
+
+## ADR-0019 — OpenRouter FLUX.2 Klein 4B for site photography
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Stock Unsplash packs are generic; client uploads are best but often missing. Need AI imagery that matches industry/theme without Max/Pro FLUX spend.
+- **Decision:** Gap-fill confirmed photos via OpenRouter `black-forest-labs/flux.2-klein-4b` (`POST /api/v1/images`) when a project has fewer than 6 photos. Priority: uploads → scrapes → OpenRouter → Unsplash fallback. Cap 8 generated images per ensure pass. Secret: `OPENROUTER_API_KEY`; model var: `OPENROUTER_IMAGE_MODEL`.
+- **Consequences:** ~$0.08–0.12 per 6-image demo at 1K. Builds never block on OpenRouter failure. Logos remain upload-only.
+
+## ADR-0017 — Multi-page static sites + project delete
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Single-page `#anchor` sites felt unfinished for sales demos; operators needed a way to clear old demos.
+- **Decision:** `renderSite` emits one HTML file per nav section (`index.html`, `services.html`, …) with path-based nav. Home uses teasers; inner pages get photo page-heroes. `DELETE /api/projects/:id` wipes R2 prefixes then D1 (CASCADE), and removes orphan clients.
+- **Consequences:** Preview URLs gain `/services.html` etc. Old single-page builds remain until regenerated. Industry-specific page types (Beliefs, Events) still map to the five core page templates.
+
+## ADR-0018 — Client media uploads (logo + photos)
+
+- **Status:** Accepted (2026-07-09)
+- **Context:** Prospects and clients provide brand logos and real photos; demos/stock alone are not enough for a finished pitch site.
+- **Decision:** `POST /api/projects/:id/uploads` accepts multipart logo/photo uploads into R2 as auto-confirmed assets. Logos render in the nav (`spec.logo`); uploaded photos sort ahead of scraped/stock in `finalizeBuild`. Dashboard exposes Upload logo / Upload photos on the project detail view.
+- **Consequences:** Operator is the content-ethics gate for customer-supplied files (unlike scraped images, which stay pending until approved). Asset file previews use the `sf_operator` cookie so `<img>` tags work without Bearer headers.
+
+## ADR-0020 — Composition recipes + design critique loop
+
+- **Status:** Accepted (2026-07-10)
+- **Context:** Themes alone produced recolored clones; quality gate only checked SEO/a11y. Sales demos and client sites needed art-directed layouts, role-assigned photography, conversion copy, and a fix pass for template-y output.
+- **Decision:** Guardrailed `CompositionRecipe` catalog (`editorial-luxury`, `warm-hospitality`, `reverent-sanctuary`, `clean-clinic`, `craft-trade`, `mission-ledger`) drives hero mode, home teaser order, extra pages (team/faq/give/visit), and image slots. `SiteImage.role` assigns hero/service/gallery/about/atmosphere. Content gains testimonials/FAQ/team + goal-driven CTAs (no "Learn more"). Post-render `critiqueBuild` + one `applyCritiqueFixes` pass; non-blocking design checks in `quality.ts`. Font pairings drop Inter as body.
+- **Consequences:** Spec JSON grows (`composition`, richer `content`). Demos may invent social proof; client builds only use sourced testimonials/FAQ/team. OpenRouter gap-fill follows recipe slots. Lighthouse 90+ structural gate unchanged.
+
+## ADR-0021 — Distinct aesthetic layout blueprints
+
+- **Status:** Accepted (2026-07-11)
+- **Context:** The six composition recipes shared too-similar visual DNA for sales demos. Prospects need unmistakably different professional layouts; new sites should inherit the same distinctiveness.
+- **Decision:** Keep recipe IDs stable. Rewrite each `layouts/*` renderer + `themes/base.ts` blueprint so each recipe owns a distinct aesthetic: Barely There (`editorial-luxury`), Bento + Tactile (`warm-hospitality`), Kinetic Typography (`reverent-sanctuary`), Conversion Journey (`clean-clinic`), Deep Mono + Neon (`craft-trade`), Dynamic Type (`mission-ledger`). Demo catalog seeds force `recipeId`; `generateBuild` accepts `{ themeId, recipeId }`. Shared micro-reveal motion + expanded font/signature pools apply to all new builds.
+- **Consequences:** Regenerated demos look structurally different. Old preview builds keep prior HTML until regenerated. Tests assert new CSS markers (`sf-hero--barely`, `sf-kinetic`, `sf-journey`, `sf-hero--neon`, etc.).

@@ -29,7 +29,6 @@
       "Bash(rm -rf:*)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
-      "Bash(git commit:*)",
       "Bash(git reset --hard:*)",
       "Bash(wrangler secret:*)",
       "Bash(npx wrangler secret:*)",

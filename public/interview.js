@@ -54,19 +54,24 @@ function buildControl(q) {
   if (q.type === 'boolean') {
     const wrap = document.createElement('div');
     wrap.className = 'opts';
+    wrap.setAttribute('role', 'radiogroup');
     let choice = null;
     for (const [label, v] of [['Yes', true], ['No', false]]) {
-      const b = document.createElement('label');
+      // A real <button> fires exactly one click event. (An earlier version used
+      // <label><input>, where the label forwarded the click to the input and the
+      // handler fired twice — silently un-toggling multi-selects.)
+      const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'opt';
-      b.tabIndex = 0;
-      b.innerHTML = `<input type="radio" name="answer" /> ${label}`;
-      const pick = () => {
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.textContent = label;
+      b.addEventListener('click', () => {
         choice = v;
-        wrap.querySelectorAll('.opt').forEach((o) => o.classList.remove('checked'));
+        wrap.querySelectorAll('.opt').forEach((o) => { o.classList.remove('checked'); o.setAttribute('aria-checked', 'false'); });
         b.classList.add('checked');
-      };
-      b.addEventListener('click', pick);
-      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+        b.setAttribute('aria-checked', 'true');
+      });
       wrap.appendChild(b);
     }
     return { node: wrap, read: () => choice };
@@ -75,24 +80,25 @@ function buildControl(q) {
     const multi = q.type === 'multi_select';
     const wrap = document.createElement('div');
     wrap.className = 'opts';
+    wrap.setAttribute('role', multi ? 'group' : 'radiogroup');
     const chosen = new Set(multi && Array.isArray(val) ? val : []);
     (q.options || []).forEach((opt) => {
-      const b = document.createElement('label');
+      const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'opt' + (chosen.has(opt) ? ' checked' : '');
-      b.tabIndex = 0;
-      b.innerHTML = `<input type="${multi ? 'checkbox' : 'radio'}" name="answer" /> ${opt}`;
-      const pick = () => {
+      b.setAttribute('role', multi ? 'checkbox' : 'radio');
+      b.setAttribute('aria-checked', chosen.has(opt) ? 'true' : 'false');
+      b.textContent = opt;
+      b.addEventListener('click', () => {
         if (multi) {
-          if (chosen.has(opt)) { chosen.delete(opt); b.classList.remove('checked'); }
-          else { chosen.add(opt); b.classList.add('checked'); }
+          if (chosen.has(opt)) { chosen.delete(opt); b.classList.remove('checked'); b.setAttribute('aria-checked', 'false'); }
+          else { chosen.add(opt); b.classList.add('checked'); b.setAttribute('aria-checked', 'true'); }
         } else {
           chosen.clear(); chosen.add(opt);
-          wrap.querySelectorAll('.opt').forEach((o) => o.classList.remove('checked'));
-          b.classList.add('checked');
+          wrap.querySelectorAll('.opt').forEach((o) => { o.classList.remove('checked'); o.setAttribute('aria-checked', 'false'); });
+          b.classList.add('checked'); b.setAttribute('aria-checked', 'true');
         }
-      };
-      b.addEventListener('click', pick);
-      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      });
       wrap.appendChild(b);
     });
     return { node: wrap, read: () => (multi ? [...chosen] : ([...chosen][0] ?? '')) };
@@ -105,8 +111,10 @@ function buildControl(q) {
   return { node: input, read: () => input.value.trim() };
 }
 
-function renderQuestion(q, progress) {
-  setProgress(progress);
+// `state` is the response body from GET/answer/back — it carries progress,
+// canGoBack, and isLast alongside the question itself.
+function renderQuestion(q, state) {
+  setProgress(state.progress);
   loading.classList.add('hidden');
   done.classList.add('hidden');
   stage.classList.remove('hidden');
@@ -145,12 +153,23 @@ function renderQuestion(q, progress) {
   const rowEl = document.createElement('div');
   rowEl.className = 'row';
   rowEl.style.marginTop = '0.5rem';
+
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'btn ghost';
+  back.textContent = 'Back';
+  if (state.canGoBack) rowEl.appendChild(back);
+
   const next = document.createElement('button');
+  next.type = 'button';
   next.className = 'btn primary';
-  next.textContent = q.required ? 'Continue' : 'Continue';
+  next.textContent = state.isLast ? 'Finish' : 'Continue';
+
   const skip = document.createElement('button');
+  skip.type = 'button';
   skip.className = 'btn ghost';
   skip.textContent = 'Skip';
+
   rowEl.appendChild(next);
   if (!q.required) rowEl.appendChild(skip);
   card.appendChild(rowEl);
@@ -160,23 +179,41 @@ function renderQuestion(q, progress) {
   const first = card.querySelector('input, textarea');
   if (first) setTimeout(() => first.focus(), 60);
 
+  function setBusy(busy) {
+    next.disabled = busy;
+    skip.disabled = busy;
+    back.disabled = busy;
+  }
+
   async function submit(value) {
-    next.disabled = true; skip.disabled = true;
+    setBusy(true);
     err.textContent = '';
     try {
       const r = await api(`/api/interview/${sessionId}/answer`, {
         method: 'POST',
         body: JSON.stringify({ questionId: q.id, value }),
       });
-      if (r.followUp) {
-        // Surface the adaptive follow-up as gentle guidance on the next render.
-        pendingFollowUp = r.followUp;
-      }
+      // Surface the adaptive follow-up as gentle guidance on the next render.
+      pendingFollowUp = r.followUp || null;
       if (r.complete) return finish();
-      renderQuestion(r.question, r.progress);
+      renderQuestion(r.question, r);
     } catch (e) {
       err.textContent = e.message;
-      next.disabled = false; skip.disabled = false;
+      setBusy(false);
+    }
+  }
+
+  async function goBack() {
+    setBusy(true);
+    err.textContent = '';
+    try {
+      const r = await api(`/api/interview/${sessionId}/back`, { method: 'POST' });
+      pendingFollowUp = null;
+      if (r.complete) return finish();
+      renderQuestion(r.question, r);
+    } catch (e) {
+      err.textContent = e.message;
+      setBusy(false);
     }
   }
 
@@ -187,6 +224,7 @@ function renderQuestion(q, progress) {
     submit(value);
   });
   skip.addEventListener('click', () => submit(q.type === 'multi_select' ? [] : ''));
+  back.addEventListener('click', goBack);
 
   // Enter submits single-line inputs.
   const single = card.querySelector('input#answer');
@@ -212,11 +250,24 @@ async function finish() {
       <div class="eyebrow" style="justify-content:center;">interview complete</div>
       <h1 style="margin:0.75rem 0 0;">Your brief is forged.</h1>
       <p class="muted" style="max-width:46ch;margin:0.75rem auto 1.25rem;">
-        Thanks${profile && profile.business.name ? `, ${escapeHtml(profile.business.name)}` : ''}. SiteForge has everything it needs to start.
-        Your operator will review the details and generate your first preview.
+        Thanks${profile && profile.business.name ? `, ${escapeHtml(profile.business.name)}` : ''}. The iron is hot — SiteForge has everything it needs.
+        Your operator will temper the details and strike your first preview.
       </p>
       ${profile ? summaryTable(profile) : ''}
+      <div class="row" style="justify-content:center;margin-top:1.5rem;">
+        <button type="button" class="btn primary" id="doneBtn">Done</button>
+      </div>
+      <p class="muted" id="doneMsg" role="status" style="margin-top:0.85rem;display:none;"></p>
     </div>`;
+
+  const doneBtn = el('doneBtn');
+  const doneMsg = el('doneMsg');
+  doneBtn.addEventListener('click', () => {
+    doneBtn.disabled = true;
+    doneMsg.textContent = "You're all set — you can close this window.";
+    doneMsg.style.display = 'block';
+  });
+  setTimeout(() => doneBtn.focus(), 60);
 }
 
 function summaryTable(p) {
@@ -245,7 +296,7 @@ async function start() {
   try {
     const r = await api(`/api/interview/${sessionId}`);
     if (r.complete) return finish();
-    renderQuestion(r.question, r.progress);
+    renderQuestion(r.question, r);
   } catch (e) {
     showFatal(e.message.includes('not found')
       ? 'This interview link is invalid or expired.'
